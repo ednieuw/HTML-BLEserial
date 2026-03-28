@@ -6,6 +6,9 @@ To control microprocessors via a serial port or Bluetooth a serial terminal is u
 When a BLE device uses the TI CC2541 (HM-10, HM-16, JDY modules) or a Nordic nRF52 chipset (all ESP32s), [an app on a phone](https://ednieuw.home.xs4all.nl/BLESerial/IOSappMain.html) can be installed and used. <br>
 Since 2026, browsers like Chrome and Edge can simulate a serial terminal via BLE directly, without installing any app.
 
+In the iPhone and iPad this HTML serial terminal does not work.<br> 
+In MacOS Tahoe and Windows 11 it does work.
+
 <img width="900" alt="image" src="https://github.com/user-attachments/assets/76d0f0b0-9bed-4342-84b6-54fc1d50e94d" />
 
 [Open the Serial monitor from my web site](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html)
@@ -105,7 +108,7 @@ The Arduino Nano ESP32 uses a u-blox ANNA-B112 module which has a known issue wh
 **Device only responds to the first character of a command**
 Check the line ending setting in the toolbar. Many devices require a specific line ending (**CR+LF**, **LF**, or **CR**) to recognise a complete command. If the wrong ending is selected the device may only process the first character. Try switching the dropdown until the device responds correctly.
 
-<img width="896" alt="BLE UART Terminal screenshot" src="https://github.com/user-attachments/assets/48aa3ccb-8bb8-40f5-8cb4-dfa19b6b3f6f" />
-
-<img width="896" alt="BLE UART Terminal screenshot" src="https://github.com/user-attachments/assets/48aa3ccb-8bb8-40f5-8cb4-dfa19b6b3f6f" />**Works on Mac but not on Windows**
+**Works on Mac but not on Windows**
 Check the browser flags above. Also try unpairing the device in Windows Bluetooth settings and reconnecting via the browser.
+
+<img width="896" alt="BLE UART Terminal screenshot" src="https://github.com/user-attachments/assets/48aa3ccb-8bb8-40f5-8cb4-dfa19b6b3f6f" />
