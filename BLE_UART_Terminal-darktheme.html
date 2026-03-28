@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,69 +7,18 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
-  /* ── Dark theme (default) ── */
   :root {
     --bg:        #0a0e0a;
     --panel:     #0d1410;
     --border:    #1a2e1a;
-    --accent:    #33dd66;
-    --accent-dim:#00aa33;
-    --accent-glow:#33dd6633;
-    --tx-color:  #ddaa33;
+    --green:     #00ff41;
+    --green-dim: #00aa2b;
+    --green-glow:#00ff4133;
+    --amber:     #ffb300;
     --red:       #ff3333;
-    --text:      #dfffdf;
-    --text-dim:  #88bb88;
-    --header-bg: linear-gradient(180deg, #0d1a0d 0%, #0a0e0a 100%);
-    --scanlines:  1;
-    --vignette:   1;
+    --text:      #c8ffc8;
+    --text-dim:  #4a7a4a;
   }
-
-  /* ── Light theme ── */
-  :root.light {
-    --bg:        #fafafa;
-    --panel:     #ffffff;
-    --border:    #e0e0e0;
-    --accent:    #006622;
-    --accent-dim:#004d19;
-    --accent-glow:#00662233;
-    --tx-color:  #884400;
-    --red:       #cc2200;
-    --text:      #111111;
-    --text-dim:  #888888;
-    --header-bg: linear-gradient(180deg, #f0f0f0 0%, #fafafa 100%);
-    --scanlines:  0;
-    --vignette:   0;
-  }
-
-  /* ── Theme toggle switch ── */
-  .theme-switch {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 0.65rem;
-    color: var(--accent);
-    letter-spacing: 0.1em;
-    cursor: pointer;
-    user-select: none;
-  }
-  .toggle-track {
-    width: 32px; height: 17px;
-    border-radius: 9px;
-    border: 1px solid var(--accent-dim);
-    background: var(--panel);
-    position: relative;
-    transition: background 0.2s, border-color 0.2s;
-    flex-shrink: 0;
-  }
-  .toggle-thumb {
-    width: 11px; height: 11px;
-    border-radius: 50%;
-    background: var(--accent);
-    position: absolute;
-    top: 2px; left: 2px;
-    transition: transform 0.2s, background 0.2s;
-  }
-  :root.light .toggle-thumb { transform: translateX(15px); background: var(--accent); }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -85,7 +34,7 @@
     overflow: hidden;
   }
 
-  /* Scanline overlay — hidden in light mode */
+  /* Scanline overlay */
   body::before {
     content: '';
     position: fixed;
@@ -99,11 +48,9 @@
     );
     pointer-events: none;
     z-index: 1000;
-    opacity: var(--scanlines);
-    transition: opacity 0.3s;
   }
 
-  /* CRT vignette — hidden in light mode */
+  /* CRT vignette */
   body::after {
     content: '';
     position: fixed;
@@ -111,8 +58,6 @@
     background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
     pointer-events: none;
     z-index: 999;
-    opacity: var(--vignette);
-    transition: opacity 0.3s;
   }
 
   header {
@@ -121,7 +66,7 @@
     justify-content: space-between;
     padding: 10px 20px;
     border-bottom: 1px solid var(--border);
-    background: var(--header-bg);
+    background: linear-gradient(180deg, #0d1a0d 0%, var(--bg) 100%);
     flex-shrink: 0;
   }
 
@@ -129,8 +74,8 @@
     font-family: 'Orbitron', sans-serif;
     font-weight: 900;
     font-size: 1rem;
-    color: var(--accent);
-    text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent-glow);
+    color: var(--green);
+    text-shadow: 0 0 10px var(--green), 0 0 20px var(--green-glow);
     letter-spacing: 0.15em;
   }
 
@@ -165,13 +110,13 @@
     transition: all 0.3s;
   }
   .dot.connected {
-    background: var(--accent);
-    box-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent);
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green), 0 0 12px var(--green);
     animation: pulse 2s infinite;
   }
   .dot.connecting {
-    background: var(--tx-color);
-    box-shadow: 0 0 6px var(--tx-color);
+    background: var(--amber);
+    box-shadow: 0 0 6px var(--amber);
     animation: blink 0.5s infinite;
   }
   .dot.error {
@@ -189,8 +134,8 @@
   }
 
   #device-name {
-    color: var(--accent);
-    text-shadow: 0 0 6px var(--accent-glow);
+    color: var(--green);
+    text-shadow: 0 0 6px var(--green-glow);
   }
 
   main {
@@ -229,13 +174,13 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: var(--accent);
+    background: var(--green);
     opacity: 0;
     transition: opacity 0.15s;
   }
   button:hover:not(:disabled) {
     border-color: var(--green-dim);
-    color: var(--accent);
+    color: var(--green);
     box-shadow: 0 0 8px var(--green-glow);
   }
   button:active:not(:disabled)::after { opacity: 0.08; }
@@ -246,7 +191,7 @@
 
   #btn-toggle {
     border-color: var(--green-dim);
-    color: var(--accent);
+    color: var(--green);
     box-shadow: 0 0 6px var(--green-glow);
   }
   #btn-toggle.connected {
@@ -286,7 +231,7 @@
     cursor: pointer;
     letter-spacing: 0.05em;
   }
-  select:focus { outline: none; border-color: var(--accent-dim); }
+  select:focus { outline: none; border-color: var(--green-dim); }
 
   .options label {
     display: flex;
@@ -297,7 +242,7 @@
     cursor: pointer;
   }
   .options input[type=checkbox] {
-    accent-color: var(--accent);
+    accent-color: var(--green);
     width: 13px; height: 13px;
     cursor: pointer;
   }
@@ -337,7 +282,7 @@
   #terminal::-webkit-scrollbar { width: 6px; }
   #terminal::-webkit-scrollbar-track { background: var(--bg); }
   #terminal::-webkit-scrollbar-thumb { background: var(--border); }
-  #terminal::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+  #terminal::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
 
   .line {
     display: flex;
@@ -361,12 +306,12 @@
     width: 20px;
     text-align: center;
   }
-  .line.rx .dir { color: var(--accent); text-shadow: 0 0 6px var(--accent); }
-  .line.tx .dir { color: var(--tx-color); text-shadow: 0 0 6px var(--tx-color); }
+  .line.rx .dir { color: var(--green); text-shadow: 0 0 6px var(--green); }
+  .line.tx .dir { color: var(--amber); text-shadow: 0 0 6px var(--amber); }
   .line.sys .dir { color: var(--text-dim); }
   .line .msg { word-break: break-all; }
-  .line.rx .msg { color: var(--accent); }
-  .line.tx .msg { color: var(--tx-color); }
+  .line.rx .msg { color: var(--green); }
+  .line.tx .msg { color: var(--amber); }
   .line.sys .msg { color: var(--text-dim); font-style: italic; }
   .line.err .msg { color: var(--red); }
 
@@ -385,9 +330,9 @@
   .input-row::before {
     content: 'TX';
     font-size: 0.6rem;
-    color: var(--tx-color);
+    color: var(--amber);
     letter-spacing: 0.15em;
-    text-shadow: 0 0 6px var(--tx-color);
+    text-shadow: 0 0 6px var(--amber);
     flex-shrink: 0;
   }
 
@@ -398,8 +343,8 @@
     outline: none;
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.85rem;
-    color: var(--tx-color);
-    caret-color: var(--tx-color);
+    color: var(--amber);
+    caret-color: var(--amber);
     padding: 4px;
     letter-spacing: 0.05em;
   }
@@ -410,13 +355,13 @@
 
   #btn-send {
     border-color: #5a4a00;
-    color: var(--tx-color);
+    color: var(--amber);
     padding: 6px 20px;
   }
   #btn-send:hover:not(:disabled) {
-    border-color: var(--tx-color);
-    color: var(--tx-color);
-    box-shadow: 0 0 8px var(--accent-glow);
+    border-color: var(--amber);
+    color: var(--amber);
+    box-shadow: 0 0 8px rgba(255,179,0,0.3);
   }
 
   /* Quick-send presets */
@@ -476,11 +421,6 @@
     </div>
     <div class="separator"></div>
     <span id="device-name">—</span>
-  </div>
-  <div class="theme-switch" id="theme-switch" title="Toggle light/dark">
-    ☀
-    <div class="toggle-track"><div class="toggle-thumb"></div></div>
-    ☾
   </div>
 </header>
 
@@ -778,11 +718,6 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     send(btn.dataset.cmd);
   });
-});
-
-// ─── Theme toggle ────────────────────────────────────────────────────────────
-document.getElementById('theme-switch').addEventListener('click', () => {
-  document.documentElement.classList.toggle('light');
 });
 
 // ─── Startup ─────────────────────────────────────────────────────────────────
