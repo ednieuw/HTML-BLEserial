@@ -6,7 +6,7 @@ To control microprocessors via a serial port or Bluetooth a serial terminal is u
 When a BLE device uses the TI CC2541 (HM-10, HM-16, JDY modules) or a Nordic nRF52 chipset (all ESP32s), [an app on a phone](https://ednieuw.home.xs4all.nl/BLESerial/IOSappMain.html) can be installed and used. <br>
 Since 2026, browsers like Chrome and Edge can simulate a serial terminal via BLE directly, without installing any app.
 
-<img width="896" alt="BLE UART Terminal screenshot" src="https://github.com/user-attachments/assets/48aa3ccb-8bb8-40f5-8cb4-dfa19b6b3f6f" />
+<img width="900" alt="image" src="https://github.com/user-attachments/assets/76d0f0b0-9bed-4342-84b6-54fc1d50e94d" />
 
 [Open Serial monitor](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html)
 
@@ -52,7 +52,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 | AUTOSCROLL | Automatically scroll to the latest received line |
 | CR+LF / LF / CR / NONE | Line ending appended to each sent command |
 | ASCII / HEX / BOTH | Display format for received data |
-
+| Light/Dark theme switch | Choose between light or dark theme |
 ---
 
 ## Device compatibility
@@ -99,6 +99,7 @@ Your device may not be advertising the correct service UUID. Try moving closer t
 **Connect failed: GATT Server is disconnected**
 Common on Windows with older BLE chipsets. The terminal retries automatically. If it keeps failing, remove the device from Windows Bluetooth settings and let the browser re-pair it.
 
+<img width="896" alt="BLE UART Terminal screenshot" src="https://github.com/user-attachments/assets/48aa3ccb-8bb8-40f5-8cb4-dfa19b6b3f6f" />
 **Device only responds to the first character of a command**
 Check the line ending setting in the toolbar. Many devices require a specific line ending (**CR+LF**, **LF**, or **CR**) to recognise a complete command. If the wrong ending is selected the device may only process the first character. Try switching the dropdown until the device responds correctly.
 
