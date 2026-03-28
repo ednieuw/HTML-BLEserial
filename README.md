@@ -8,7 +8,7 @@ Since 2026, browsers like Chrome and Edge can simulate a serial terminal via BLE
 
 <img width="900" alt="image" src="https://github.com/user-attachments/assets/76d0f0b0-9bed-4342-84b6-54fc1d50e94d" />
 
-[Open Serial monitor](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html)
+[Open the Serial monitor from my web site](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html)
 
 ---
 
@@ -99,9 +99,13 @@ Your device may not be advertising the correct service UUID. Try moving closer t
 **Connect failed: GATT Server is disconnected**
 Common on Windows with older BLE chipsets. The terminal retries automatically. If it keeps failing, remove the device from Windows Bluetooth settings and let the browser re-pair it.
 
-<img width="896" alt="BLE UART Terminal screenshot" src="https://github.com/user-attachments/assets/48aa3ccb-8bb8-40f5-8cb4-dfa19b6b3f6f" />
+**Arduino Nano ESP32 shows as "Unknown" in the terminal**
+The Arduino Nano ESP32 uses a u-blox ANNA-B112 module which has a known issue where the BLE device name is not properly exposed to Web Bluetooth in Chrome, even when the name is correctly set in firmware with `NimBLEDevice::init()` and `pAdvertising->setName()`. The device connects and works normally — only the name is missing. Other ESP32 variants (C3, S3, standard ESP32) broadcast their name correctly. This is a board-level limitation and cannot be worked around from the webpage.
+
 **Device only responds to the first character of a command**
 Check the line ending setting in the toolbar. Many devices require a specific line ending (**CR+LF**, **LF**, or **CR**) to recognise a complete command. If the wrong ending is selected the device may only process the first character. Try switching the dropdown until the device responds correctly.
 
-**Works on Mac but not on Windows**
+<img width="896" alt="BLE UART Terminal screenshot" src="https://github.com/user-attachments/assets/48aa3ccb-8bb8-40f5-8cb4-dfa19b6b3f6f" />
+
+<img width="896" alt="BLE UART Terminal screenshot" src="https://github.com/user-attachments/assets/48aa3ccb-8bb8-40f5-8cb4-dfa19b6b3f6f" />**Works on Mac but not on Windows**
 Check the browser flags above. Also try unpairing the device in Windows Bluetooth settings and reconnecting via the browser.
