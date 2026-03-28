@@ -1,12 +1,14 @@
 # HTML-BLEserial
 
-Webpage terminal / serial monitor to connect to a BLE UART device.
+[Webpage terminal / serial monitor to connect to a BLE UART device.](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html)
 
 To control microprocessors via a serial port or Bluetooth a serial terminal is used — a program that sends and receives ASCII characters.<br> 
 When a BLE device uses the TI CC2541 (HM-10, HM-16, JDY modules) or a Nordic nRF52 chipset (all ESP32s), [an app on a phone](https://ednieuw.home.xs4all.nl/BLESerial/IOSappMain.html) can be installed and used. <br>
 Since 2026, browsers like Chrome and Edge can simulate a serial terminal via BLE directly, without installing any app.
 
 <img width="896" alt="BLE UART Terminal screenshot" src="https://github.com/user-attachments/assets/48aa3ccb-8bb8-40f5-8cb4-dfa19b6b3f6f" />
+
+[Open Serial monitor](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html)
 
 ---
 
