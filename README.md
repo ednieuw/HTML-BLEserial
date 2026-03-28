@@ -9,6 +9,13 @@ Since 2026, browsers like Chrome and Edge can simulate a serial terminal via BLE
 In the iPhone and iPad this HTML serial terminal does not work.<br> 
 In MacOS Tahoe and Windows 11 it does work.
 
+My **Arduino Nano ESP32** programs shows "Unknown or usupported Device" and after Pairing/connnecting:<br>
+Connect failed: GATT Server is disconnected. Cannot retrieve services. (Re)connect first with `device.gatt.connect`<br>
+Connect again , it is paired, and it will connect.<br>
+
+ESP32 Dev boards do display the BLE broadcast names. Why ???
+
+
 <img width="900" alt="image" src="https://github.com/user-attachments/assets/76d0f0b0-9bed-4342-84b6-54fc1d50e94d" />
 
 [Open the Serial monitor from my web site](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html)
