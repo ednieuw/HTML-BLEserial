@@ -5,15 +5,18 @@
 To control microprocessors via a serial port or Bluetooth a serial terminal is used — a program that sends and receives ASCII characters.<br> 
 When a BLE device uses the TI CC2541 (HM-10, HM-16, JDY modules) or a Nordic nRF52 chipset (all ESP32s), [an app on a phone](https://ednieuw.home.xs4all.nl/BLESerial/IOSappMain.html) can be installed and used. <br>
 
-Since 2026, browsers like Chrome and Edge can simulate a serial terminal via BLE directly, without installing any app.<br>
-It is still experimental and must often be turned on. (See below how to do this)
+Since 2025, browsers like Chrome and Edge can simulate a serial terminal via BLE directly, without installing any app.<br>
+It is still experimental and maybe must be turned on. (See below how to do this)
 
-In the iPhone and iPad this HTML serial terminal does not work (yet).<br> 
+With the iPhone and iPad this BLE-HTML serial terminal does not work (yet).<br> 
 In MacOS Tahoe and Windows 11 web-BLE does work.
 
-When the Connect is pressed some devices does not broadcast  their name directly "Unknown or usupported Device" <br>
+<img width="543" height="303" alt="image" src="https://github.com/user-attachments/assets/0f13acdc-91bb-44c8-a4b0-d339fb397cee" />
+
+When the Connect is pressed some devices do not broadcast their name directly "Unknown or usupported Device" <br>
 and after Pairing/connnecting: Connect failed: GATT Server is disconnected. Cannot retrieve services. (Re)connect first with `device.gatt.connect`<br>
-- Connect again , it is paired, and it will connect.<br>
+
+Connect again and it will connect.<br>
 The broadcast name is also often displayed.  
 
 <img width="900" alt="image" src="https://github.com/user-attachments/assets/76d0f0b0-9bed-4342-84b6-54fc1d50e94d" />
