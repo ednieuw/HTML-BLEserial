@@ -3,7 +3,7 @@
 [Webpage terminal / serial monitor to connect to a BLE UART device.](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html)
 
 To control microprocessors via a serial port or Bluetooth a serial terminal is used — a program that sends and receives ASCII characters.<br> 
-When a BLE device uses the TI CC2541 (HM-10, HM-16, JDY modules) or a Nordic nRF52 chipset (all ESP32s), [an app on a phone](https://ednieuw.home.xs4all.nl/BLESerial/IOSappMain.html) can be installed and used. <br>
+When a BLE device uses the TI CC2541 (HM-10, HM-16, JDY modules) or a Nordic nRF52 chipset (all ESP32s), [an app on a phone](https://ednieuw.nl/BLESerial/IOSappMain.html) can be installed and used. <br>
 
 Since 2025, browsers like Chrome and Edge can simulate a serial terminal via BLE directly, without installing any app.<br>
 It is still experimental and behaves different on Windows 11 and MacOS Tahoe.
@@ -26,7 +26,7 @@ The broadcast name is then often displayed.
 
 <img width="900" alt="image" src="https://github.com/user-attachments/assets/76d0f0b0-9bed-4342-84b6-54fc1d50e94d" />
 
-[Open the Serial monitor from my web site](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html)
+[Open the Serial monitor from my web site](https://ednieuw.nl/BLESerial/BLE_UART_Terminal.html)
 
 ---
 
@@ -52,7 +52,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 
 ## Usage
 
-1. Open `BLE_UART_Terminal.html` from [ednieuw.home.xs4all.nl](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html) in Chrome or Edge
+1. Open `BLE_UART_Terminal.html` from [ednieuw.nl](https://ednieuw.home.xs4all.nl/BLESerial/BLE_UART_Terminal.html) in Chrome or Edge
 2. Click **⬡ CONNECT** — a browser dialog appears listing nearby BLE devices
 3. Select your device and click **Pair** (despite the label, no PIN or bond is required)
 4. The status indicator turns green and the device name appears in the header
