@@ -501,6 +501,9 @@ const UART_RX_CHAR_UUID     = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify 
 let device = null, server = null, txChar = null, rxChar = null;
 let rxBytes = 0, txBytes = 0, msgCount = 0;
 let currentRxMsg = null;
+let lastRxWasCR = false;
+let isConnecting = false;
+let txQueue = Promise.resolve();
 const history = [];
 let histIdx = -1;
 
@@ -570,6 +573,9 @@ function errlog(msg) { log(msg, 'err'); }
 
 // ─── Connect ─────────────────────────────────────────────────────────────────
 async function connect() {
+  if (isConnecting) return;
+  isConnecting = true;
+  btnToggle.disabled = true;
   try {
     setStatus('connecting');
     syslog('Scanning for BLE UART devices…');
@@ -598,10 +604,12 @@ async function connect() {
         txChar = await service.getCharacteristic(UART_TX_CHAR_UUID);
         rxChar = await service.getCharacteristic(UART_RX_CHAR_UUID);
 
+        rxChar.removeEventListener('characteristicvaluechanged', onRx);
         await rxChar.startNotifications();
         rxChar.addEventListener('characteristicvaluechanged', onRx);
         break;
       } catch (e) {
+        if (rxChar) rxChar.removeEventListener('characteristicvaluechanged', onRx);
         if (dev.gatt && dev.gatt.connected) {
           dev.gatt.disconnect();
         }
@@ -612,27 +620,32 @@ async function connect() {
       }
     }
 
-    device = dev;
     dev.addEventListener('gattserverdisconnected', onDisconnected);
     setStatus('connected', dev.name || 'Unknown');
     log(`Connected to [${dev.name || 'Unknown'}] — ready.`, 'ok');
     enableUI(true);
 
   } catch (err) {
+    if (rxChar) rxChar.removeEventListener('characteristicvaluechanged', onRx);
     if (device && device.gatt && device.gatt.connected) {
       device.gatt.disconnect();
     }
     device = null; server = null; txChar = null; rxChar = null;
+    statSvc.textContent = 'SERVICE: —';
     setStatus('disconnected');
     enableUI(false);
     if (err.name !== 'NotFoundError') errlog(`Connect failed: ${err.message}`);
     else syslog('Scan cancelled.');
+  } finally {
+    isConnecting = false;
+    btnToggle.disabled = false;
+    if (!txChar) btnToggle.focus();
   }
 }
 
 // ─── Disconnect ──────────────────────────────────────────────────────────────
-async function disconnect() {
-  if (device && device.gatt.connected) {
+function disconnect() {
+  if (device && device.gatt && device.gatt.connected) {
     device.gatt.disconnect();
   }
 }
@@ -641,7 +654,10 @@ function onDisconnected(event) {
   if (event && event.target) {
     event.target.removeEventListener('gattserverdisconnected', onDisconnected);
   }
+  if (rxChar) rxChar.removeEventListener('characteristicvaluechanged', onRx);
   currentRxMsg = null;
+  lastRxWasCR = false;
+  statSvc.textContent = 'SERVICE: —';
   setStatus('disconnected');
   enableUI(false);
   syslog('Device disconnected.');
@@ -655,7 +671,7 @@ function onRx(event) {
   rxBytes += bytes.length;
   statRx.textContent = rxBytes;
 
-  const text = new TextDecoder().decode(bytes);
+  let text = new TextDecoder().decode(bytes);
   const disp = optDisp.value;
 
   if (disp === 'hex') {
@@ -663,9 +679,14 @@ function onRx(event) {
   } else if (disp === 'both') {
     log(`${text.replace(/[\r\n]+/g, '↵')}  [${toHexStr(bytes)}]`, 'rx');
   } else {
+    if (lastRxWasCR && text.startsWith('\n')) text = text.slice(1);
+    lastRxWasCR = text.endsWith('\r');
     const parts = text.replace(/\r\n?/g, '\n').split('\n');
     parts.forEach((part, idx) => {
-      if (idx > 0) currentRxMsg = null;
+      if (idx > 0) {
+        if (currentRxMsg === null) log('', 'rx');
+        currentRxMsg = null;
+      }
       if (part.length) {
         if (currentRxMsg) {
           currentRxMsg.textContent += part;
@@ -679,29 +700,22 @@ function onRx(event) {
 }
 
 // ─── TX ──────────────────────────────────────────────────────────────────────
-async function send(text) {
-  if (!txChar) { errlog('Not connected.'); return; }
+function send(text) {
+  const run = txQueue.then(() => sendNow(text));
+  txQueue = run.catch(() => false);
+  return run;
+}
+
+async function sendNow(text) {
+  if (!txChar) { errlog('Not connected.'); return false; }
 
   let payload = text;
   if (optNL.value === 'crlf') payload += '\r\n';
   else if (optNL.value === 'lf') payload += '\n';
   else if (optNL.value === 'cr') payload += '\r';
-  if (!payload.length) return;
+  if (!payload.length) return true;
 
   const encoded = new TextEncoder().encode(payload);
-
-  if (text.length) {
-    if (currentRxMsg) {
-      const txSpan = document.createElement('span');
-      txSpan.className = 'tx-inline';
-      txSpan.textContent = text;
-      currentRxMsg.appendChild(txSpan);
-      if (optScroll.checked) terminal.scrollTop = terminal.scrollHeight;
-    } else {
-      log(text, 'tx');
-    }
-  }
-  currentRxMsg = null;
 
   // Split into 20-byte MTU-safe chunks
   try {
@@ -711,12 +725,27 @@ async function send(text) {
     txBytes += encoded.length;
     statTx.textContent = txBytes;
 
+    if (text.length) {
+      if (currentRxMsg) {
+        const txSpan = document.createElement('span');
+        txSpan.className = 'tx-inline';
+        txSpan.textContent = text;
+        currentRxMsg.appendChild(txSpan);
+        if (optScroll.checked) terminal.scrollTop = terminal.scrollHeight;
+      } else {
+        log(text, 'tx');
+      }
+    }
+    currentRxMsg = null;
+
     // History
     if (text.length && history[0] !== text) history.unshift(text);
     if (history.length > 50) history.pop();
     histIdx = -1;
+    return true;
   } catch (err) {
     errlog(`Send failed: ${err.message}`);
+    return false;
   }
 }
 
@@ -734,11 +763,12 @@ function enableUI(connected) {
   btnSend.disabled = !connected;
   document.querySelectorAll('.preset-btn').forEach(b => b.disabled = !connected);
   if (connected) txInput.focus();
+  else if (!btnToggle.disabled) btnToggle.focus();
 }
 
 // ─── Events ──────────────────────────────────────────────────────────────────
 btnToggle.addEventListener('click', () => {
-  if (device && device.gatt.connected) disconnect();
+  if (device && device.gatt && device.gatt.connected) disconnect();
   else connect();
 });
 btnSend.addEventListener('click', () => {
@@ -769,13 +799,24 @@ txInput.addEventListener('paste', async e => {
   e.preventDefault();
   if (!txChar) { errlog('Not connected.'); return; }
   const lines = text.split(/\r\n|\n|\r/);
-  if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
-  if (txInput.value) {
-    lines[0] = txInput.value + lines[0];
+  const hasTrailingNL = lines.length > 1 && lines[lines.length - 1] === '';
+  if (hasTrailingNL) lines.pop();
+  const start = txInput.selectionStart ?? txInput.value.length;
+  const end = txInput.selectionEnd ?? txInput.value.length;
+  const before = txInput.value.slice(0, start);
+  const after = txInput.value.slice(end);
+  lines[0] = before + lines[0];
+  if (hasTrailingNL) {
+    txInput.value = after;
+    txInput.setSelectionRange(0, 0);
+  } else {
+    lines[lines.length - 1] += after;
     txInput.value = '';
   }
   for (const line of lines) {
-    await send(line);
+    if (!txChar) break;
+    const ok = await send(line);
+    if (!ok) break;
   }
 });
 
@@ -785,6 +826,7 @@ optDir.addEventListener('change', () => {
 
 document.getElementById('btn-clear').addEventListener('click', () => {
   currentRxMsg = null;
+  lastRxWasCR = false;
   terminal.innerHTML = '';
   syslog('Terminal cleared.');
 });
