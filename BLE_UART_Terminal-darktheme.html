@@ -497,11 +497,14 @@ const UART_SERVICE_UUID     = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const UART_TX_CHAR_UUID     = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write (host→device)
 const UART_RX_CHAR_UUID     = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify (device→host)
 
+const MAX_TERMINAL_LINES = 10000;
+
 // ─── State ───────────────────────────────────────────────────────────────────
 let device = null, server = null, txChar = null, rxChar = null;
 let rxBytes = 0, txBytes = 0, msgCount = 0;
 let currentRxMsg = null;
 let lastRxWasCR = false;
+let rxDecoder = new TextDecoder();
 let isConnecting = false;
 let txQueue = Promise.resolve();
 const history = [];
@@ -561,6 +564,9 @@ function log(text, type = 'sys') {
 
   line.append(tsEl, dir, msg);
   terminal.appendChild(line);
+  while (terminal.childElementCount > MAX_TERMINAL_LINES) {
+    terminal.removeChild(terminal.firstElementChild);
+  }
   msgCount++;
   statMsgs.textContent = msgCount;
 
@@ -657,6 +663,7 @@ function onDisconnected(event) {
   if (rxChar) rxChar.removeEventListener('characteristicvaluechanged', onRx);
   currentRxMsg = null;
   lastRxWasCR = false;
+  rxDecoder = new TextDecoder();
   statSvc.textContent = 'SERVICE: —';
   setStatus('disconnected');
   enableUI(false);
@@ -667,18 +674,19 @@ function onDisconnected(event) {
 // ─── RX ──────────────────────────────────────────────────────────────────────
 function onRx(event) {
   const value = event.target.value;
-  const bytes = new Uint8Array(value.buffer);
+  const bytes = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
   rxBytes += bytes.length;
   statRx.textContent = rxBytes;
 
-  let text = new TextDecoder().decode(bytes);
   const disp = optDisp.value;
 
   if (disp === 'hex') {
     log(toHexStr(bytes), 'rx');
   } else if (disp === 'both') {
+    const text = rxDecoder.decode(bytes, { stream: true });
     log(`${text.replace(/[\r\n]+/g, '↵')}  [${toHexStr(bytes)}]`, 'rx');
   } else {
+    let text = rxDecoder.decode(bytes, { stream: true });
     if (lastRxWasCR && text.startsWith('\n')) text = text.slice(1);
     lastRxWasCR = text.endsWith('\r');
     const parts = text.replace(/\r\n?/g, '\n').split('\n');
@@ -700,6 +708,16 @@ function onRx(event) {
 }
 
 // ─── TX ──────────────────────────────────────────────────────────────────────
+function writeChunk(char, chunk) {
+  if (char.properties && char.properties.writeWithoutResponse && !char.properties.write) {
+    return char.writeValueWithoutResponse(chunk);
+  }
+  if (typeof char.writeValueWithResponse === 'function') {
+    return char.writeValueWithResponse(chunk);
+  }
+  return char.writeValue(chunk);
+}
+
 function send(text) {
   const run = txQueue.then(() => sendNow(text));
   txQueue = run.catch(() => false);
@@ -717,26 +735,29 @@ async function sendNow(text) {
 
   const encoded = new TextEncoder().encode(payload);
 
+  let txEl = null;
+  let txParent = null;
+  if (text.length) {
+    if (currentRxMsg) {
+      txParent = currentRxMsg;
+      txEl = document.createElement('span');
+      txEl.className = 'tx-inline';
+      txEl.textContent = text;
+      txParent.appendChild(txEl);
+      if (optScroll.checked) terminal.scrollTop = terminal.scrollHeight;
+    } else {
+      txEl = log(text, 'tx').parentElement;
+    }
+  }
+  currentRxMsg = null;
+
   // Split into 20-byte MTU-safe chunks
   try {
     for (let i = 0; i < encoded.length; i += 20) {
-      await txChar.writeValue(encoded.slice(i, i + 20));
+      await writeChunk(txChar, encoded.slice(i, i + 20));
     }
     txBytes += encoded.length;
     statTx.textContent = txBytes;
-
-    if (text.length) {
-      if (currentRxMsg) {
-        const txSpan = document.createElement('span');
-        txSpan.className = 'tx-inline';
-        txSpan.textContent = text;
-        currentRxMsg.appendChild(txSpan);
-        if (optScroll.checked) terminal.scrollTop = terminal.scrollHeight;
-      } else {
-        log(text, 'tx');
-      }
-    }
-    currentRxMsg = null;
 
     // History
     if (text.length && history[0] !== text) history.unshift(text);
@@ -744,6 +765,13 @@ async function sendNow(text) {
     histIdx = -1;
     return true;
   } catch (err) {
+    if (txEl && txEl.parentNode) {
+      txEl.parentNode.removeChild(txEl);
+      if (!txParent) {
+        msgCount--;
+        statMsgs.textContent = msgCount;
+      }
+    }
     errlog(`Send failed: ${err.message}`);
     return false;
   }
@@ -827,6 +855,7 @@ optDir.addEventListener('change', () => {
 document.getElementById('btn-clear').addEventListener('click', () => {
   currentRxMsg = null;
   lastRxWasCR = false;
+  rxDecoder = new TextDecoder();
   terminal.innerHTML = '';
   syslog('Terminal cleared.');
 });
@@ -841,6 +870,7 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
 // ─── Startup ─────────────────────────────────────────────────────────────────
 syslog('BLE UART Terminal ready. Click CONNECT to scan for devices.');
 syslog('Using Nordic UART Service (NUS) — compatible with most word clock firmware.');
+if (!btnToggle.disabled) btnToggle.focus();
 </script>
 </body>
 </html>
