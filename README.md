@@ -69,6 +69,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 | TIMESTAMP | Prefix each line with HH:MM:SS.mmm (off by default) |
 | AUTOSCROLL | Automatically scroll to the latest received line |
 | ARROWS | Show `◀` / `▶` direction indicators next to each line (off by default) |
+| ECHO | Echo sent commands in the terminal (on by default; disable if the device echoes commands itself) |
 | CR+LF / LF / CR / NONE | Line ending appended to each sent command |
 | ASCII / HEX / BOTH | Display format for received data |
 | Light/Dark theme switch | Choose between light or dark theme |

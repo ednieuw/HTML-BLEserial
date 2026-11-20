@@ -449,6 +449,7 @@
       <label><input type="checkbox" id="opt-timestamp"> TIMESTAMP</label>
       <label><input type="checkbox" id="opt-autoscroll" checked> AUTOSCROLL</label>
       <label><input type="checkbox" id="opt-dir"> ARROWS</label>
+      <label><input type="checkbox" id="opt-echo" checked> ECHO</label>
       <select id="opt-newline">
         <option value="crlf">CR+LF</option>
         <option value="lf">LF</option>
@@ -525,6 +526,7 @@ const statSvc    = document.getElementById('stat-service');
 const optTS      = document.getElementById('opt-timestamp');
 const optScroll  = document.getElementById('opt-autoscroll');
 const optDir     = document.getElementById('opt-dir');
+const optEcho    = document.getElementById('opt-echo');
 const optNL      = document.getElementById('opt-newline');
 const optDisp    = document.getElementById('opt-display');
 const noBle      = document.getElementById('no-ble');
@@ -737,19 +739,21 @@ async function sendNow(text) {
 
   let txEl = null;
   let txParent = null;
-  if (text.length) {
-    if (currentRxMsg) {
-      txParent = currentRxMsg;
-      txEl = document.createElement('span');
-      txEl.className = 'tx-inline';
-      txEl.textContent = text;
-      txParent.appendChild(txEl);
-      if (optScroll.checked) terminal.scrollTop = terminal.scrollHeight;
-    } else {
-      txEl = log(text, 'tx').parentElement;
+  if (optEcho.checked) {
+    if (text.length) {
+      if (currentRxMsg) {
+        txParent = currentRxMsg;
+        txEl = document.createElement('span');
+        txEl.className = 'tx-inline';
+        txEl.textContent = text;
+        txParent.appendChild(txEl);
+        if (optScroll.checked) terminal.scrollTop = terminal.scrollHeight;
+      } else {
+        txEl = log(text, 'tx').parentElement;
+      }
     }
+    currentRxMsg = null;
   }
-  currentRxMsg = null;
 
   // Split into 20-byte MTU-safe chunks
   try {
