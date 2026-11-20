@@ -354,6 +354,7 @@
     flex-shrink: 0;
     user-select: none;
   }
+  .line .ts:empty { display: none; }
   .line .dir {
     font-size: 0.7rem;
     font-weight: bold;
@@ -361,10 +362,11 @@
     width: 20px;
     text-align: center;
   }
+  #terminal.hide-dir .line .dir { display: none; }
   .line.rx .dir { color: var(--accent); text-shadow: 0 0 6px var(--accent); }
   .line.tx .dir { color: var(--tx-color); text-shadow: 0 0 6px var(--tx-color); }
   .line.sys .dir { color: var(--text-dim); }
-  .line .msg { word-break: break-all; }
+  .line .msg { white-space: pre-wrap; word-break: break-word; }
   .line.rx .msg { color: var(--accent); }
   .line.tx .msg { color: var(--tx-color); }
   .line.sys .msg { color: var(--text-dim); font-style: italic; }
@@ -493,6 +495,7 @@
     <div class="options">
       <label><input type="checkbox" id="opt-timestamp"> TIMESTAMP</label>
       <label><input type="checkbox" id="opt-autoscroll" checked> AUTOSCROLL</label>
+      <label><input type="checkbox" id="opt-dir"> ARROWS</label>
       <select id="opt-newline">
         <option value="crlf">CR+LF</option>
         <option value="lf">LF</option>
@@ -519,7 +522,7 @@
   </div>
 
   <div class="terminal-wrapper">
-    <div id="terminal"></div>
+    <div id="terminal" class="hide-dir"></div>
   </div>
 
   <div class="input-row">
@@ -562,6 +565,7 @@ const statMsgs   = document.getElementById('stat-msgs');
 const statSvc    = document.getElementById('stat-service');
 const optTS      = document.getElementById('opt-timestamp');
 const optScroll  = document.getElementById('opt-autoscroll');
+const optDir     = document.getElementById('opt-dir');
 const optNL      = document.getElementById('opt-newline');
 const optDisp    = document.getElementById('opt-display');
 const noBle      = document.getElementById('no-ble');
@@ -615,44 +619,57 @@ async function connect() {
     setStatus('connecting');
     syslog('Scanning for BLE UART devices…');
 
-    device = await navigator.bluetooth.requestDevice({
+    const dev = await navigator.bluetooth.requestDevice({
       filters: [{ services: [UART_SERVICE_UUID] }],
       optionalServices: [UART_SERVICE_UUID],
       // Skip OS pairing dialog where possible
     });
+    // Chrome reuses the same BluetoothDevice instance across reconnects; strip any stale listener
+    dev.removeEventListener('gattserverdisconnected', onDisconnected);
+    device = dev;
 
-    syslog(`Found: ${device.name || 'Unknown'}`);
-    device.addEventListener('gattserverdisconnected', onDisconnected);
+    syslog(`Found: ${dev.name || 'Unknown'}`);
 
-    // Windows BLE often drops the first GATT connect — retry up to 3x
+    // Windows BLE often drops the first GATT connect or service discovery — retry full setup up to 3x
     let retries = 3;
     while (retries--) {
       try {
-        server = await device.gatt.connect();
+        server = await dev.gatt.connect();
+        syslog('GATT connected, discovering services…');
+
+        const service = await server.getPrimaryService(UART_SERVICE_UUID);
+        statSvc.textContent = `SERVICE: NUS`;
+
+        txChar = await service.getCharacteristic(UART_TX_CHAR_UUID);
+        rxChar = await service.getCharacteristic(UART_RX_CHAR_UUID);
+
+        await rxChar.startNotifications();
+        rxChar.addEventListener('characteristicvaluechanged', onRx);
         break;
-      } catch(e) {
+      } catch (e) {
+        if (dev.gatt && dev.gatt.connected) {
+          dev.gatt.disconnect();
+        }
+        server = null; txChar = null; rxChar = null;
         if (retries === 0) throw e;
-        syslog(`GATT connect failed, retrying… (${retries} left)`);
+        syslog(`GATT setup failed, retrying… (${retries} left)`);
         await new Promise(r => setTimeout(r, 1000));
       }
     }
-    syslog('GATT connected, discovering services…');
 
-    const service = await server.getPrimaryService(UART_SERVICE_UUID);
-    statSvc.textContent = `SERVICE: NUS`;
-
-    txChar = await service.getCharacteristic(UART_TX_CHAR_UUID);
-    rxChar = await service.getCharacteristic(UART_RX_CHAR_UUID);
-
-    await rxChar.startNotifications();
-    rxChar.addEventListener('characteristicvaluechanged', onRx);
-
-    setStatus('connected', device.name || 'Unknown');
-    syslog(`Connected to [${device.name || 'Unknown'}] — ready.`);
+    device = dev;
+    dev.addEventListener('gattserverdisconnected', onDisconnected);
+    setStatus('connected', dev.name || 'Unknown');
+    syslog(`Connected to [${dev.name || 'Unknown'}] — ready.`);
     enableUI(true);
 
   } catch (err) {
+    if (device && device.gatt && device.gatt.connected) {
+      device.gatt.disconnect();
+    }
+    device = null; server = null; txChar = null; rxChar = null;
     setStatus('disconnected');
+    enableUI(false);
     if (err.name !== 'NotFoundError') errlog(`Connect failed: ${err.message}`);
     else syslog('Scan cancelled.');
   }
@@ -665,7 +682,10 @@ async function disconnect() {
   }
 }
 
-function onDisconnected() {
+function onDisconnected(event) {
+  if (event && event.target) {
+    event.target.removeEventListener('gattserverdisconnected', onDisconnected);
+  }
   setStatus('disconnected');
   enableUI(false);
   syslog('Device disconnected.');
@@ -766,6 +786,10 @@ txInput.addEventListener('keydown', e => {
     if (histIdx > 0) { histIdx--; txInput.value = history[histIdx]; }
     else if (histIdx === 0) { histIdx = -1; txInput.value = ''; }
   }
+});
+
+optDir.addEventListener('change', () => {
+  terminal.classList.toggle('hide-dir', !optDir.checked);
 });
 
 document.getElementById('btn-clear').addEventListener('click', () => {
