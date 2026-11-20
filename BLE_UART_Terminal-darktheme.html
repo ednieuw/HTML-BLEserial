@@ -763,6 +763,22 @@ txInput.addEventListener('keydown', e => {
   }
 });
 
+txInput.addEventListener('paste', async e => {
+  const text = e.clipboardData && e.clipboardData.getData('text');
+  if (!text || !/[\r\n]/.test(text)) return;
+  e.preventDefault();
+  if (!txChar) { errlog('Not connected.'); return; }
+  const lines = text.split(/\r\n|\n|\r/);
+  if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+  if (txInput.value) {
+    lines[0] = txInput.value + lines[0];
+    txInput.value = '';
+  }
+  for (const line of lines) {
+    await send(line);
+  }
+});
+
 optDir.addEventListener('change', () => {
   terminal.classList.toggle('hide-dir', !optDir.checked);
 });
