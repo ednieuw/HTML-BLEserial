@@ -57,7 +57,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 3. Select your device and click **Pair** (despite the label, no PIN or bond is required)
 4. The status indicator turns green and the device name appears in the header
 5. Type a command in the input field and press **Enter** or **SEND**
-6. Received data appears in green (◀), sent data in amber (▶)
+6. Received data appears in green, sent data in amber (enable **ARROWS** to show `◀` / `▶` direction indicators)
 7. Click **✕ DISCONNECT** to disconnect
 
 ---
@@ -68,6 +68,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 |---|---|
 | TIMESTAMP | Prefix each line with HH:MM:SS.mmm (off by default) |
 | AUTOSCROLL | Automatically scroll to the latest received line |
+| ARROWS | Show `◀` / `▶` direction indicators next to each line (off by default) |
 | CR+LF / LF / CR / NONE | Line ending appended to each sent command |
 | ASCII / HEX / BOTH | Display format for received data |
 | Light/Dark theme switch | Choose between light or dark theme |
