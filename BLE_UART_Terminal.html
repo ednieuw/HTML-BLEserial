@@ -368,11 +368,29 @@
   .line.rx .dir { color: var(--accent); text-shadow: 0 0 6px var(--accent); }
   .line.tx .dir { color: var(--tx-color); text-shadow: 0 0 6px var(--tx-color); }
   .line.sys .dir { color: var(--text-dim); }
+  .line.ok .dir { color: var(--accent); text-shadow: 0 0 6px var(--accent); }
   .line .msg { white-space: pre-wrap; word-break: break-word; }
   .line.rx .msg { color: var(--rx-text); text-shadow: 0 0 4px var(--accent-glow); }
   :root.light .line.rx .msg { text-shadow: none; }
   .line.tx .msg { color: var(--tx-color); }
   .line.sys .msg { color: var(--text-dim); font-style: italic; }
+  .line.ok {
+    margin: 4px 0;
+    padding: 4px 8px;
+    border-left: 3px solid var(--accent);
+    background: rgba(68, 238, 119, 0.08);
+  }
+  :root.light .line.ok {
+    background: rgba(0, 102, 34, 0.08);
+  }
+  .line.ok .msg {
+    color: var(--accent);
+    font-weight: bold;
+    text-shadow: 0 0 6px var(--accent-glow);
+  }
+  :root.light .line.ok .msg, :root.light .line.ok .dir {
+    text-shadow: none;
+  }
   .line.err .msg { color: var(--red); }
 
   /* Input row */
@@ -599,7 +617,7 @@ function log(text, type = 'sys') {
 
   const dir = document.createElement('span');
   dir.className = 'dir';
-  dir.textContent = type === 'rx' ? '◀' : type === 'tx' ? '▶' : type === 'err' ? '✕' : '·';
+  dir.textContent = type === 'rx' ? '◀' : type === 'tx' ? '▶' : type === 'err' ? '✕' : type === 'ok' ? '✓' : '·';
 
   const msg = document.createElement('span');
   msg.className = 'msg';
@@ -663,7 +681,7 @@ async function connect() {
     device = dev;
     dev.addEventListener('gattserverdisconnected', onDisconnected);
     setStatus('connected', dev.name || 'Unknown');
-    syslog(`Connected to [${dev.name || 'Unknown'}] — ready.`);
+    log(`Connected to [${dev.name || 'Unknown'}] — ready.`, 'ok');
     enableUI(true);
 
   } catch (err) {

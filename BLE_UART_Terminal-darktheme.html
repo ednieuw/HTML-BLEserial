@@ -312,10 +312,22 @@
   .line.rx .dir { color: var(--green); text-shadow: 0 0 6px var(--green); }
   .line.tx .dir { color: var(--amber); text-shadow: 0 0 6px var(--amber); }
   .line.sys .dir { color: var(--text-dim); }
+  .line.ok .dir { color: var(--green); text-shadow: 0 0 6px var(--green); }
   .line .msg { white-space: pre-wrap; word-break: break-word; }
   .line.rx .msg { color: var(--rx-text); text-shadow: 0 0 4px var(--green-glow); }
   .line.tx .msg { color: var(--amber); }
   .line.sys .msg { color: var(--text-dim); font-style: italic; }
+  .line.ok {
+    margin: 4px 0;
+    padding: 4px 8px;
+    border-left: 3px solid var(--green);
+    background: rgba(61, 255, 110, 0.08);
+  }
+  .line.ok .msg {
+    color: var(--green);
+    font-weight: bold;
+    text-shadow: 0 0 6px var(--green-glow);
+  }
   .line.err .msg { color: var(--red); }
 
   /* Input row */
@@ -537,7 +549,7 @@ function log(text, type = 'sys') {
 
   const dir = document.createElement('span');
   dir.className = 'dir';
-  dir.textContent = type === 'rx' ? '◀' : type === 'tx' ? '▶' : type === 'err' ? '✕' : '·';
+  dir.textContent = type === 'rx' ? '◀' : type === 'tx' ? '▶' : type === 'err' ? '✕' : type === 'ok' ? '✓' : '·';
 
   const msg = document.createElement('span');
   msg.className = 'msg';
@@ -601,7 +613,7 @@ async function connect() {
     device = dev;
     dev.addEventListener('gattserverdisconnected', onDisconnected);
     setStatus('connected', dev.name || 'Unknown');
-    syslog(`Connected to [${dev.name || 'Unknown'}] — ready.`);
+    log(`Connected to [${dev.name || 'Unknown'}] — ready.`, 'ok');
     enableUI(true);
 
   } catch (err) {
