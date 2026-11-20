@@ -372,7 +372,7 @@
   .line .msg { white-space: pre-wrap; word-break: break-word; }
   .line.rx .msg { color: var(--rx-text); text-shadow: 0 0 4px var(--accent-glow); }
   :root.light .line.rx .msg { text-shadow: none; }
-  .line.tx .msg { color: var(--tx-color); }
+  .line.tx .msg, .line .tx-inline { color: var(--tx-color); }
   .line.sys .msg { color: var(--text-dim); font-style: italic; }
   .line.ok {
     margin: 4px 0;
@@ -568,7 +568,7 @@ const UART_RX_CHAR_UUID     = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify 
 // ─── State ───────────────────────────────────────────────────────────────────
 let device = null, server = null, txChar = null, rxChar = null;
 let rxBytes = 0, txBytes = 0, msgCount = 0;
-let rxBuffer = '';
+let currentRxMsg = null;
 const history = [];
 let histIdx = -1;
 
@@ -608,6 +608,7 @@ function toHexStr(bytes) {
 }
 
 function log(text, type = 'sys') {
+  currentRxMsg = null;
   const line = document.createElement('div');
   line.className = `line ${type}`;
 
@@ -629,6 +630,7 @@ function log(text, type = 'sys') {
   statMsgs.textContent = msgCount;
 
   if (optScroll.checked) terminal.scrollTop = terminal.scrollHeight;
+  return msg;
 }
 
 function syslog(msg) { log(msg, 'sys'); }
@@ -707,6 +709,7 @@ function onDisconnected(event) {
   if (event && event.target) {
     event.target.removeEventListener('gattserverdisconnected', onDisconnected);
   }
+  currentRxMsg = null;
   setStatus('disconnected');
   enableUI(false);
   syslog('Device disconnected.');
@@ -728,25 +731,45 @@ function onRx(event) {
   } else if (disp === 'both') {
     log(`${text.replace(/[\r\n]+/g, '↵')}  [${toHexStr(bytes)}]`, 'rx');
   } else {
-    // Buffer lines
-    rxBuffer += text;
-    const lines = rxBuffer.split(/\r?\n/);
-    rxBuffer = lines.pop(); // keep incomplete last chunk
-    lines.forEach(l => l.length && log(l, 'rx'));
+    const parts = text.replace(/\r\n?/g, '\n').split('\n');
+    parts.forEach((part, idx) => {
+      if (idx > 0) currentRxMsg = null;
+      if (part.length) {
+        if (currentRxMsg) {
+          currentRxMsg.textContent += part;
+        } else {
+          currentRxMsg = log(part, 'rx');
+        }
+      }
+    });
+    if (optScroll.checked) terminal.scrollTop = terminal.scrollHeight;
   }
 }
 
 // ─── TX ──────────────────────────────────────────────────────────────────────
 async function send(text) {
   if (!txChar) { errlog('Not connected.'); return; }
-  if (!text.trim() && text === '') return;
 
   let payload = text;
   if (optNL.value === 'crlf') payload += '\r\n';
   else if (optNL.value === 'lf') payload += '\n';
   else if (optNL.value === 'cr') payload += '\r';
+  if (!payload.length) return;
 
   const encoded = new TextEncoder().encode(payload);
+
+  if (text.length) {
+    if (currentRxMsg) {
+      const txSpan = document.createElement('span');
+      txSpan.className = 'tx-inline';
+      txSpan.textContent = text;
+      currentRxMsg.appendChild(txSpan);
+      if (optScroll.checked) terminal.scrollTop = terminal.scrollHeight;
+    } else {
+      log(text, 'tx');
+    }
+  }
+  currentRxMsg = null;
 
   // Split into 20-byte MTU-safe chunks
   try {
@@ -755,10 +778,9 @@ async function send(text) {
     }
     txBytes += encoded.length;
     statTx.textContent = txBytes;
-    log(text, 'tx');
 
     // History
-    if (history[0] !== text) history.unshift(text);
+    if (text.length && history[0] !== text) history.unshift(text);
     if (history.length > 50) history.pop();
     histIdx = -1;
   } catch (err) {
@@ -814,6 +836,7 @@ optDir.addEventListener('change', () => {
 });
 
 document.getElementById('btn-clear').addEventListener('click', () => {
+  currentRxMsg = null;
   terminal.innerHTML = '';
   syslog('Terminal cleared.');
 });
