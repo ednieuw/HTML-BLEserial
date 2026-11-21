@@ -53,6 +53,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 ## Usage
 
 1. Open `BLE_UART_Terminal.html` from [ednieuw.com](https://ednieuw.com/BLESerial/BLE_UART_Terminal.html) in Chrome or Edge
+   Or save the BLE_UART_Terminal.html from this repository on your device or web site.
 2. Click **⬡ CONNECT** — a browser dialog appears listing nearby BLE devices
 3. Select your device and click **Pair** (despite the label, no PIN or bond is required)
 4. The status indicator turns green and the device name appears in the header
