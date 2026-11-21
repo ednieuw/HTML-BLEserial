@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BLE UART Terminal</title>
+<script>
+try {
+  const s = JSON.parse(localStorage.getItem('bleUartTerminal.v1') || '{}');
+  if (s.theme === 'dark') document.documentElement.classList.remove('light');
+} catch (_) {}
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
@@ -74,6 +80,7 @@
   :root.light .toggle-thumb { transform: translateX(16px); background: var(--accent); }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
 
   html { height: 100%; }
 
@@ -454,7 +461,14 @@
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+    align-items: center;
     flex-shrink: 0;
+  }
+  .preset-list {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
   }
   .preset-label {
     font-size: 0.72rem;
@@ -468,6 +482,47 @@
     padding: 5px 12px;
     border-color: var(--border);
   }
+  .presets.editing .preset-btn {
+    border-style: dashed;
+    border-color: var(--accent-dim);
+  }
+  .preset-btn.editing {
+    border-color: var(--tx-color);
+    color: var(--tx-color);
+  }
+  .preset-action {
+    font-size: 0.78rem;
+    padding: 5px 10px;
+    border-color: var(--border);
+  }
+  .preset-action.active {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+  .preset-editor {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .preset-editor input {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 8px;
+    outline: none;
+  }
+  .preset-editor input:focus { border-color: var(--accent-dim); }
+  #preset-edit-label { width: 140px; }
+  #preset-edit-cmd { flex: 1; min-width: 140px; }
+  .preset-editor button { font-size: 0.75rem; padding: 4px 10px; }
+  #btn-preset-delete { border-color: #8a2a2a; color: var(--red); }
 
   /* Stats bar */
   .stats {
@@ -497,7 +552,7 @@
 <header>
   <div class="logo">
     BLE UART TERMINAL
-    <br><a href="https://github.com/ednieuw/HTML-BLEserial" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; font-size: 60%;">EdSoft @2026 V1.2</a>
+    <br><a href="https://github.com/ednieuw/HTML-BLEserial" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; font-size: 60%;">EdSoft @2026 V1.3</a>
   </div>
   <div class="status-bar">
     <div class="status-indicator">
@@ -519,6 +574,7 @@
 
   <div class="controls">
     <button id="btn-toggle">⬡ CONNECT</button>
+    <button id="btn-reconnect" hidden>↺ RECONNECT</button>
     <div class="separator"></div>
     <div class="options">
       <label><input type="checkbox" id="opt-timestamp"> TIMESTAMP</label>
@@ -540,24 +596,30 @@
     <button id="btn-clear">CLR</button>
   </div>
 
-  <div class="presets">
+  <div class="presets" id="presets-bar">
     <span class="preset-label">QUICK:</span>
-    <button class="preset-btn" data-cmd="I">INFO</button>
-    <button class="preset-btn" data-cmd="T">TIME?</button>
-    <button class="preset-btn" data-cmd="S">SYNC</button>
-    <button class="preset-btn" data-cmd="R">RESET</button>
-    <button class="preset-btn" data-cmd="D">DEBUG</button>
-    <button class="preset-btn" data-cmd="H">HELP</button>
+    <div class="preset-list" id="preset-list"></div>
+    <button class="preset-action" id="btn-preset-add" title="Add quick button" hidden>+</button>
+    <button class="preset-action" id="btn-preset-reset" title="Reset quick buttons to defaults" hidden>↺</button>
+    <button class="preset-action" id="btn-preset-edit" title="Edit quick buttons">✎</button>
+  </div>
+
+  <div class="preset-editor" id="preset-editor" hidden>
+    <input type="text" id="preset-edit-label" placeholder="Label (e.g. INFO)" maxlength="24" autocomplete="off" spellcheck="false">
+    <input type="text" id="preset-edit-cmd" placeholder="Command (e.g. I)" autocomplete="off" spellcheck="false">
+    <button id="btn-preset-save">SAVE</button>
+    <button id="btn-preset-delete">DEL</button>
+    <button id="btn-preset-cancel">CANCEL</button>
   </div>
 
   <div class="terminal-wrapper">
     <div id="terminal" class="hide-dir"></div>
   </div>
 
-  <div class="input-row">
-    <input type="text" id="tx-input" placeholder="type command and press ENTER or SEND…" disabled autocomplete="off" spellcheck="false">
-    <button id="btn-send" disabled>SEND ↵</button>
-  </div>
+  <form class="input-row" id="tx-form">
+    <input type="text" id="tx-input" enterkeyhint="send" placeholder="type command and press ENTER or SEND…" disabled autocomplete="off" spellcheck="false">
+    <button type="submit" id="btn-send" disabled>SEND ↵</button>
+  </form>
 
   <div class="stats">
     RX: <span id="stat-rx">0</span> bytes &nbsp;|&nbsp;
@@ -574,9 +636,20 @@ const UART_TX_CHAR_UUID     = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write (
 const UART_RX_CHAR_UUID     = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify (device→host)
 
 const MAX_TERMINAL_LINES = 10000;
+const STORAGE_KEY = 'bleUartTerminal.v1';
+const DEFAULT_PRESETS = [
+  { label: 'INFO',  cmd: 'I' },
+  { label: 'TIME?', cmd: 'T' },
+  { label: 'SYNC',  cmd: 'S' },
+  { label: 'RESET', cmd: 'R' },
+  { label: 'DEBUG', cmd: 'D' },
+  { label: 'HELP',  cmd: 'H' },
+];
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let device = null, server = null, txChar = null, rxChar = null;
+let rememberedDevice = null;
+let sessionDevice = null;
 let rxBytes = 0, txBytes = 0, msgCount = 0;
 let currentRxMsg = null;
 let lastRxWasCR = false;
@@ -585,12 +658,16 @@ let isConnecting = false;
 let txQueue = Promise.resolve();
 const history = [];
 let histIdx = -1;
+let presets = DEFAULT_PRESETS.map(p => ({ ...p }));
+let isEditingPresets = false;
+let editingPresetIdx = null;
 
 // ─── DOM ─────────────────────────────────────────────────────────────────────
-const terminal   = document.getElementById('terminal');
-const txInput    = document.getElementById('tx-input');
-const btnToggle  = document.getElementById('btn-toggle');
-const btnSend    = document.getElementById('btn-send');
+const terminal     = document.getElementById('terminal');
+const txInput      = document.getElementById('tx-input');
+const btnToggle    = document.getElementById('btn-toggle');
+const btnReconnect = document.getElementById('btn-reconnect');
+const btnSend      = document.getElementById('btn-send');
 const statusDot  = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 const deviceName = document.getElementById('device-name');
@@ -605,6 +682,97 @@ const optEcho    = document.getElementById('opt-echo');
 const optNL      = document.getElementById('opt-newline');
 const optDisp    = document.getElementById('opt-display');
 const noBle      = document.getElementById('no-ble');
+const presetsBar       = document.getElementById('presets-bar');
+const presetList       = document.getElementById('preset-list');
+const btnPresetAdd     = document.getElementById('btn-preset-add');
+const btnPresetReset   = document.getElementById('btn-preset-reset');
+const btnPresetEdit    = document.getElementById('btn-preset-edit');
+const presetEditor     = document.getElementById('preset-editor');
+const presetEditLabel  = document.getElementById('preset-edit-label');
+const presetEditCmd    = document.getElementById('preset-edit-cmd');
+const btnPresetSave    = document.getElementById('btn-preset-save');
+const btnPresetDelete  = document.getElementById('btn-preset-delete');
+const btnPresetCancel  = document.getElementById('btn-preset-cancel');
+
+// ─── Persistence ─────────────────────────────────────────────────────────────
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveState(extra = {}) {
+  try {
+    const prev = loadState();
+    const state = {
+      ...prev,
+      theme: document.documentElement.classList.contains('light') ? 'light' : 'dark',
+      timestamp: optTS.checked,
+      autoscroll: optScroll.checked,
+      dir: optDir.checked,
+      echo: optEcho.checked,
+      newline: optNL.value,
+      display: optDisp.value,
+      history: history.slice(0, 50),
+      ...extra,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (_) {}
+}
+
+function restoreState() {
+  const s = loadState();
+  if (s.theme === 'dark') document.documentElement.classList.remove('light');
+  else if (s.theme === 'light') document.documentElement.classList.add('light');
+
+  if (typeof s.timestamp === 'boolean') optTS.checked = s.timestamp;
+  if (typeof s.autoscroll === 'boolean') optScroll.checked = s.autoscroll;
+  if (typeof s.dir === 'boolean') optDir.checked = s.dir;
+  if (typeof s.echo === 'boolean') optEcho.checked = s.echo;
+  if (['crlf', 'lf', 'cr', 'none'].includes(s.newline)) optNL.value = s.newline;
+  if (['ascii', 'hex', 'both'].includes(s.display)) optDisp.value = s.display;
+
+  terminal.classList.toggle('hide-dir', !optDir.checked);
+
+  if (Array.isArray(s.history)) {
+    history.splice(0, history.length, ...s.history.filter(x => typeof x === 'string').slice(0, 50));
+  }
+  if (Array.isArray(s.presets)) {
+    const valid = s.presets.filter(p => p && typeof p.label === 'string' && typeof p.cmd === 'string');
+    presets = valid.map(p => ({ label: p.label, cmd: p.cmd }));
+  }
+  renderPresets();
+}
+
+async function refreshReconnectButton() {
+  rememberedDevice = null;
+  btnReconnect.hidden = true;
+  if (txChar || !navigator.bluetooth) return;
+  const { lastDevice } = loadState();
+  if (typeof navigator.bluetooth.getDevices === 'function') {
+    try {
+      const devices = await navigator.bluetooth.getDevices();
+      if (devices.length) {
+        rememberedDevice = (lastDevice && devices.find(d => d.id === lastDevice.id)) || devices[0];
+      }
+    } catch (_) {}
+  }
+  if (!rememberedDevice && sessionDevice) {
+    rememberedDevice = sessionDevice;
+  }
+  if (rememberedDevice) {
+    const label = rememberedDevice.name || (lastDevice && lastDevice.name) || 'last device';
+    btnReconnect.title = `Reconnect to ${label}`;
+    btnReconnect.hidden = false;
+  }
+  if (!txChar && !isConnecting) {
+    if (!btnReconnect.hidden && !btnReconnect.disabled) btnReconnect.focus();
+    else if (!btnToggle.disabled) btnToggle.focus();
+  }
+}
 
 // ─── Check Web Bluetooth ─────────────────────────────────────────────────────
 if (!navigator.bluetooth) {
@@ -655,59 +823,59 @@ function syslog(msg) { log(msg, 'sys'); }
 function errlog(msg) { log(msg, 'err'); }
 
 // ─── Connect ─────────────────────────────────────────────────────────────────
-async function connect() {
+async function connectToDevice(dev) {
+  // Chrome reuses the same BluetoothDevice instance across reconnects; strip any stale listener
+  dev.removeEventListener('gattserverdisconnected', onDisconnected);
+  device = dev;
+
+  syslog(`Found: ${dev.name || 'Unknown'}`);
+
+  // Windows BLE often drops the first GATT connect or service discovery — retry full setup up to 3x
+  let retries = 3;
+  while (retries--) {
+    try {
+      server = await dev.gatt.connect();
+      syslog('GATT connected, discovering services…');
+
+      const service = await server.getPrimaryService(UART_SERVICE_UUID);
+      statSvc.textContent = `SERVICE: NUS`;
+
+      txChar = await service.getCharacteristic(UART_TX_CHAR_UUID);
+      rxChar = await service.getCharacteristic(UART_RX_CHAR_UUID);
+
+      rxChar.removeEventListener('characteristicvaluechanged', onRx);
+      await rxChar.startNotifications();
+      rxChar.addEventListener('characteristicvaluechanged', onRx);
+      break;
+    } catch (e) {
+      if (rxChar) rxChar.removeEventListener('characteristicvaluechanged', onRx);
+      if (dev.gatt && dev.gatt.connected) {
+        dev.gatt.disconnect();
+      }
+      server = null; txChar = null; rxChar = null;
+      if (retries === 0) throw e;
+      syslog(`GATT setup failed, retrying… (${retries} left)`);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+
+  dev.addEventListener('gattserverdisconnected', onDisconnected);
+  sessionDevice = dev;
+  saveState({ lastDevice: { id: dev.id, name: dev.name || '' } });
+  setStatus('connected', dev.name || 'Unknown');
+  log(`Connected to [${dev.name || 'Unknown'}] — ready.`, 'ok');
+  enableUI(true);
+}
+
+async function runConnect(getDevice) {
   if (isConnecting) return;
   isConnecting = true;
   btnToggle.disabled = true;
+  btnReconnect.disabled = true;
   try {
     setStatus('connecting');
-    syslog('Scanning for BLE UART devices…');
-
-    const dev = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [UART_SERVICE_UUID] }],
-      optionalServices: [UART_SERVICE_UUID],
-      // Skip OS pairing dialog where possible
-    });
-    // Chrome reuses the same BluetoothDevice instance across reconnects; strip any stale listener
-    dev.removeEventListener('gattserverdisconnected', onDisconnected);
-    device = dev;
-
-    syslog(`Found: ${dev.name || 'Unknown'}`);
-
-    // Windows BLE often drops the first GATT connect or service discovery — retry full setup up to 3x
-    let retries = 3;
-    while (retries--) {
-      try {
-        server = await dev.gatt.connect();
-        syslog('GATT connected, discovering services…');
-
-        const service = await server.getPrimaryService(UART_SERVICE_UUID);
-        statSvc.textContent = `SERVICE: NUS`;
-
-        txChar = await service.getCharacteristic(UART_TX_CHAR_UUID);
-        rxChar = await service.getCharacteristic(UART_RX_CHAR_UUID);
-
-        rxChar.removeEventListener('characteristicvaluechanged', onRx);
-        await rxChar.startNotifications();
-        rxChar.addEventListener('characteristicvaluechanged', onRx);
-        break;
-      } catch (e) {
-        if (rxChar) rxChar.removeEventListener('characteristicvaluechanged', onRx);
-        if (dev.gatt && dev.gatt.connected) {
-          dev.gatt.disconnect();
-        }
-        server = null; txChar = null; rxChar = null;
-        if (retries === 0) throw e;
-        syslog(`GATT setup failed, retrying… (${retries} left)`);
-        await new Promise(r => setTimeout(r, 1000));
-      }
-    }
-
-    dev.addEventListener('gattserverdisconnected', onDisconnected);
-    setStatus('connected', dev.name || 'Unknown');
-    log(`Connected to [${dev.name || 'Unknown'}] — ready.`, 'ok');
-    enableUI(true);
-
+    const dev = await getDevice();
+    await connectToDevice(dev);
   } catch (err) {
     if (rxChar) rxChar.removeEventListener('characteristicvaluechanged', onRx);
     if (device && device.gatt && device.gatt.connected) {
@@ -722,8 +890,29 @@ async function connect() {
   } finally {
     isConnecting = false;
     btnToggle.disabled = false;
-    if (!txChar) btnToggle.focus();
+    btnReconnect.disabled = false;
+    refreshReconnectButton();
   }
+}
+
+function connect() {
+  return runConnect(() => {
+    syslog('Scanning for BLE UART devices…');
+    return navigator.bluetooth.requestDevice({
+      filters: [{ services: [UART_SERVICE_UUID] }],
+      optionalServices: [UART_SERVICE_UUID],
+      // Skip OS pairing dialog where possible
+    });
+  });
+}
+
+function reconnect() {
+  if (!rememberedDevice) return;
+  const target = rememberedDevice;
+  return runConnect(() => {
+    syslog(`Reconnecting to [${target.name || 'Unknown'}]…`);
+    return Promise.resolve(target);
+  });
 }
 
 // ─── Disconnect ──────────────────────────────────────────────────────────────
@@ -746,6 +935,7 @@ function onDisconnected(event) {
   enableUI(false);
   syslog('Device disconnected.');
   device = null; server = null; txChar = null; rxChar = null;
+  refreshReconnectButton();
 }
 
 // ─── RX ──────────────────────────────────────────────────────────────────────
@@ -842,6 +1032,7 @@ async function sendNow(text) {
     if (text.length && history[0] !== text) history.unshift(text);
     if (history.length > 50) history.pop();
     histIdx = -1;
+    saveState();
     return true;
   } catch (err) {
     if (txEl && txEl.parentNode) {
@@ -866,9 +1057,10 @@ function setStatus(state, name = '—') {
 function enableUI(connected) {
   btnToggle.textContent = connected ? '✕ DISCONNECT' : '⬡ CONNECT';
   btnToggle.classList.toggle('connected', connected);
+  if (connected) btnReconnect.hidden = true;
   txInput.disabled = !connected;
   btnSend.disabled = !connected;
-  document.querySelectorAll('.preset-btn').forEach(b => b.disabled = !connected);
+  document.querySelectorAll('.preset-btn').forEach(b => b.disabled = !connected && !isEditingPresets);
   if (connected) txInput.focus();
   else if (!btnToggle.disabled) btnToggle.focus();
 }
@@ -878,16 +1070,15 @@ btnToggle.addEventListener('click', () => {
   if (device && device.gatt && device.gatt.connected) disconnect();
   else connect();
 });
-btnSend.addEventListener('click', () => {
+btnReconnect.addEventListener('click', reconnect);
+document.getElementById('tx-form').addEventListener('submit', e => {
+  e.preventDefault();
   send(txInput.value);
   txInput.value = '';
 });
 
 txInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    send(txInput.value);
-    txInput.value = '';
-  } else if (e.key === 'ArrowUp') {
+  if (e.key === 'ArrowUp') {
     e.preventDefault();
     if (histIdx < history.length - 1) {
       histIdx++;
@@ -927,8 +1118,20 @@ txInput.addEventListener('paste', async e => {
   }
 });
 
+function focusTxIfConnected() {
+  if (txChar && !txInput.disabled) txInput.focus();
+}
+
 optDir.addEventListener('change', () => {
   terminal.classList.toggle('hide-dir', !optDir.checked);
+  saveState();
+  focusTxIfConnected();
+});
+[optTS, optScroll, optEcho, optNL, optDisp].forEach(el => {
+  el.addEventListener('change', () => {
+    saveState();
+    focusTxIfConnected();
+  });
 });
 
 document.getElementById('btn-clear').addEventListener('click', () => {
@@ -937,24 +1140,113 @@ document.getElementById('btn-clear').addEventListener('click', () => {
   rxDecoder = new TextDecoder();
   terminal.innerHTML = '';
   syslog('Terminal cleared.');
+  focusTxIfConnected();
 });
 
-document.querySelectorAll('.preset-btn').forEach(btn => {
-  btn.disabled = true;
-  btn.addEventListener('click', () => {
-    send(btn.dataset.cmd);
+// ─── Quick-send presets ──────────────────────────────────────────────────────
+function renderPresets() {
+  presetList.innerHTML = '';
+  presetsBar.classList.toggle('editing', isEditingPresets);
+  presets.forEach((p, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    if (isEditingPresets && editingPresetIdx === idx) btn.classList.add('editing');
+    btn.textContent = p.label;
+    btn.title = isEditingPresets ? `Edit "${p.label}" (${p.cmd})` : p.cmd;
+    btn.disabled = !txChar && !isEditingPresets;
+    btn.addEventListener('click', () => {
+      if (isEditingPresets) openPresetEditor(idx);
+      else {
+        send(p.cmd);
+        focusTxIfConnected();
+      }
+    });
+    btn.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      if (!isEditingPresets) setPresetEditMode(true);
+      openPresetEditor(idx);
+    });
+    presetList.appendChild(btn);
+  });
+}
+
+function setPresetEditMode(on) {
+  isEditingPresets = on;
+  btnPresetEdit.classList.toggle('active', on);
+  btnPresetEdit.textContent = on ? 'DONE' : '✎';
+  btnPresetAdd.hidden = !on;
+  btnPresetReset.hidden = !on;
+  if (!on) {
+    closePresetEditor();
+    focusTxIfConnected();
+  }
+  else renderPresets();
+}
+
+function openPresetEditor(idx) {
+  editingPresetIdx = idx;
+  const isNew = idx < 0;
+  presetEditLabel.value = isNew ? '' : presets[idx].label;
+  presetEditCmd.value = isNew ? '' : presets[idx].cmd;
+  btnPresetDelete.hidden = isNew;
+  presetEditor.hidden = false;
+  renderPresets();
+  presetEditLabel.focus();
+}
+
+function closePresetEditor() {
+  editingPresetIdx = null;
+  presetEditor.hidden = true;
+  renderPresets();
+}
+
+function savePresetEdit() {
+  if (editingPresetIdx === null) return;
+  const cmd = presetEditCmd.value;
+  const label = presetEditLabel.value.trim() || cmd.trim();
+  if (!label) return;
+  const entry = { label, cmd };
+  if (editingPresetIdx < 0) presets.push(entry);
+  else presets[editingPresetIdx] = entry;
+  saveState({ presets });
+  closePresetEditor();
+}
+
+btnPresetEdit.addEventListener('click', () => setPresetEditMode(!isEditingPresets));
+btnPresetAdd.addEventListener('click', () => openPresetEditor(-1));
+btnPresetReset.addEventListener('click', () => {
+  presets = DEFAULT_PRESETS.map(p => ({ ...p }));
+  saveState({ presets });
+  closePresetEditor();
+});
+btnPresetSave.addEventListener('click', savePresetEdit);
+btnPresetDelete.addEventListener('click', () => {
+  if (editingPresetIdx !== null && editingPresetIdx >= 0) {
+    presets.splice(editingPresetIdx, 1);
+    saveState({ presets });
+  }
+  closePresetEditor();
+});
+btnPresetCancel.addEventListener('click', closePresetEditor);
+[presetEditLabel, presetEditCmd].forEach(el => {
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); savePresetEdit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); closePresetEditor(); }
   });
 });
 
 // ─── Theme toggle ────────────────────────────────────────────────────────────
 document.getElementById('theme-switch').addEventListener('click', () => {
   document.documentElement.classList.toggle('light');
+  saveState();
+  focusTxIfConnected();
 });
 
 // ─── Startup ─────────────────────────────────────────────────────────────────
+restoreState();
+refreshReconnectButton();
 syslog('BLE UART Terminal ready. Click CONNECT to scan for devices.');
 syslog('Using Nordic UART Service (NUS) — compatible with most word clock firmware.');
-if (!btnToggle.disabled) btnToggle.focus();
 </script>
 </body>
 </html>
