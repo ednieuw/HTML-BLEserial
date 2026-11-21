@@ -616,10 +616,10 @@ try {
     <div id="terminal" class="hide-dir"></div>
   </div>
 
-  <div class="input-row">
-    <input type="text" id="tx-input" placeholder="type command and press ENTER or SEND…" disabled autocomplete="off" spellcheck="false">
-    <button id="btn-send" disabled>SEND ↵</button>
-  </div>
+  <form class="input-row" id="tx-form">
+    <input type="text" id="tx-input" enterkeyhint="send" placeholder="type command and press ENTER or SEND…" disabled autocomplete="off" spellcheck="false">
+    <button type="submit" id="btn-send" disabled>SEND ↵</button>
+  </form>
 
   <div class="stats">
     RX: <span id="stat-rx">0</span> bytes &nbsp;|&nbsp;
@@ -1071,16 +1071,14 @@ btnToggle.addEventListener('click', () => {
   else connect();
 });
 btnReconnect.addEventListener('click', reconnect);
-btnSend.addEventListener('click', () => {
+document.getElementById('tx-form').addEventListener('submit', e => {
+  e.preventDefault();
   send(txInput.value);
   txInput.value = '';
 });
 
 txInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    send(txInput.value);
-    txInput.value = '';
-  } else if (e.key === 'ArrowUp') {
+  if (e.key === 'ArrowUp') {
     e.preventDefault();
     if (histIdx < history.length - 1) {
       histIdx++;
