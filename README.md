@@ -11,7 +11,7 @@ It is still experimental and behaves different on Windows 11 and MacOS Tahoe.
 With the iPhone and iPad this BLE-HTML serial terminal does not work (yet).<br> 
 In MacOS Tahoe and Windows 11 web-BLE does work.
 
-<img width="543" height="303" alt="image" src="https://github.com/user-attachments/assets/0f13acdc-91bb-44c8-a4b0-d339fb397cee" />
+<img width="550" alt="Browser dialog listing nearby BLE devices to pair with" src="images/BLE_pair_dialog.png" />
 
 When the Connect is pressed some devices do not broadcast their name directly "Unknown or usupported Device" 
 
@@ -58,7 +58,41 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 4. The status indicator turns green and the device name appears in the header
 5. Type a command in the input field and press **Enter** or **SEND** (or paste multiple lines to send them sequentially; if the device leaves an open prompt without a newline, your sent command appears inline)
 6. Received data appears in green, sent data in amber (enable **ARROWS** to show `◀` / `▶` direction indicators)
-7. Click **✕ DISCONNECT** to disconnect
+7. Click **✕ DISCONNECT** to disconnect. To connect to the same device again, use **↺ RECONNECT**
+
+---
+
+## What's new since V1.1
+
+**V1.4**
+- Quick buttons can be edited in the page: change, add, remove (red **×** or **DEL**), reset to defaults, **EXPORT** to and **IMPORT** from a `quick-buttons.json` file.
+- The QUICK row now sits directly above the command line.
+
+**Between V1.1 and V1.4**
+- **↺ RECONNECT** button to connect to the last used device without scanning.
+- Connection setup is more robust: service discovery is retried together with the GATT connection, a double connect is prevented, and stale listeners are cleaned up on reconnect.
+- **ARROWS** option: the `◀` / `▶` direction indicators are now optional (off by default).
+- **ECHO** option: show sent commands in the terminal. If the device leaves an open prompt without a newline, the command appears inline after it.
+- Received text is decoded as a stream, so multi-byte characters and lines split over several BLE packets are shown correctly (CR, LF and CR+LF are all handled).
+- Sending uses a queue, so commands always go out in order, and picks the write method the device supports.
+- Pasting several lines sends them one by one.
+- Settings, command history and quick buttons are remembered in the browser (theme, TIMESTAMP, AUTOSCROLL, ARROWS, ECHO, line ending, display format, last device).
+- The connected message is shown as a highlighted line with a `✓`, and the terminal keeps the last 10,000 lines.
+- Slightly adjusted colours and larger text.
+
+---
+
+## Features
+
+- **Connect with automatic retries:** the GATT connection and service discovery are retried up to 3 times (1 second apart), which helps on Windows.
+- **Reconnect button:** after a disconnect, or when the page is opened again, a **↺ RECONNECT** button appears for the last used device. It connects straight away without scanning (browsers that support `getDevices()` remember previously paired devices; otherwise the device from the current session is used).
+- **Receive in ASCII, HEX or BOTH:** choose the display format in the toolbar. In ASCII mode, partial lines are joined and CR, LF and CR+LF are all handled; BOTH shows the text and the hex bytes.
+- **Sending in 20-byte chunks with a send queue:** every command (including the selected line ending) is split into 20-byte pieces that fit a small BLE MTU. Commands are queued, so they are always sent in order, one after the other.
+- **Multi-line paste:** pasting text with several lines into the input field sends the lines one by one. Sending stops if the connection is lost or a write fails.
+- **Command history:** press **↑** / **↓** in the input field to step through previously sent commands (the last 50 are kept, also after a reload).
+- **Quick buttons:** one-click commands that can be edited, removed, exported and imported (see [Quick-send buttons](#quick-send-buttons)).
+- **Remembered settings:** the theme, TIMESTAMP, AUTOSCROLL, ARROWS, ECHO, line ending, display format, command history, quick buttons and last device are saved in the browser and restored at the next visit.
+- **Terminal limit:** the terminal keeps the last 10,000 lines.
 
 ---
 
@@ -107,7 +141,34 @@ RX (notify): 6E400003-B5A3-F393-E0A9-E50E24DCCA9E
 
 ## Quick-send buttons
 
-The row of preset buttons sends a single command with one click. To customize them, edit the `data-cmd` attribute and label text of each `.preset-btn` button in the HTML source.
+The **QUICK:** row, located directly above the command line, sends a single command with one click. The buttons are editable in the page itself — no need to touch the HTML source.
+
+Click **✎** at the end of the row to enter edit mode (the button changes to **DONE**; click it to leave edit mode):
+
+| Control | Description |
+|---|---|
+| Click a quick button | Opens the editor row to change its label and command. **SAVE** (or Enter) stores it, **CANCEL** (or Esc) discards, **DEL** deletes it |
+| Right-click a quick button | Enters edit mode and opens the editor for that button |
+| **×** (red, next to each button) | Removes that quick button immediately |
+| **+** | Adds a new quick button |
+| **EXPORT** | Downloads all quick buttons as `quick-buttons.json` |
+| **IMPORT** | Loads a `.json` file and replaces the current quick buttons |
+| **↺** | Resets the quick buttons to the defaults (INFO, TIME?, SYNC, RESET, DEBUG, HELP) |
+
+### Where the buttons are stored
+
+The quick buttons are saved in the browser's localStorage (key `bleUartTerminal.v1`), not in a file. They are tied to the browser, profile and address the page was opened from, and are lost when site data is cleared. Use **EXPORT** to keep a backup or to move the buttons to another browser or computer, and **IMPORT** to restore them.
+
+The export file looks like this (a plain JSON array of `{label, cmd}` objects is also accepted on import):
+
+```json
+{
+  "presets": [
+    { "label": "INFO", "cmd": "I" },
+    { "label": "TIME?", "cmd": "T" }
+  ]
+}
+```
 
 ---
 

@@ -490,6 +490,14 @@ try {
     border-color: var(--tx-color);
     color: var(--tx-color);
   }
+  .preset-item { display: inline-flex; align-items: stretch; }
+  .preset-remove {
+    font-size: 0.78rem;
+    padding: 5px 7px;
+    border-color: #8a2a2a;
+    color: var(--red);
+    border-left: none;
+  }
   .preset-action {
     font-size: 0.78rem;
     padding: 5px 10px;
@@ -552,7 +560,7 @@ try {
 <header>
   <div class="logo">
     BLE UART TERMINAL
-    <br><a href="https://github.com/ednieuw/HTML-BLEserial" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; font-size: 60%;">EdSoft @2026 V1.3</a>
+    <br><a href="https://github.com/ednieuw/HTML-BLEserial" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; font-size: 60%;">EdSoft @2026 V1.4</a>
   </div>
   <div class="status-bar">
     <div class="status-indicator">
@@ -596,10 +604,17 @@ try {
     <button id="btn-clear">CLR</button>
   </div>
 
+  <div class="terminal-wrapper">
+    <div id="terminal" class="hide-dir"></div>
+  </div>
+
   <div class="presets" id="presets-bar">
     <span class="preset-label">QUICK:</span>
     <div class="preset-list" id="preset-list"></div>
     <button class="preset-action" id="btn-preset-add" title="Add quick button" hidden>+</button>
+    <button class="preset-action" id="btn-preset-export" title="Export quick buttons to a .json file" hidden>EXPORT</button>
+    <button class="preset-action" id="btn-preset-import" title="Import quick buttons from a .json file" hidden>IMPORT</button>
+    <input type="file" id="preset-import-file" accept=".json,application/json" hidden>
     <button class="preset-action" id="btn-preset-reset" title="Reset quick buttons to defaults" hidden>↺</button>
     <button class="preset-action" id="btn-preset-edit" title="Edit quick buttons">✎</button>
   </div>
@@ -610,10 +625,6 @@ try {
     <button id="btn-preset-save">SAVE</button>
     <button id="btn-preset-delete">DEL</button>
     <button id="btn-preset-cancel">CANCEL</button>
-  </div>
-
-  <div class="terminal-wrapper">
-    <div id="terminal" class="hide-dir"></div>
   </div>
 
   <form class="input-row" id="tx-form">
@@ -687,6 +698,9 @@ const presetList       = document.getElementById('preset-list');
 const btnPresetAdd     = document.getElementById('btn-preset-add');
 const btnPresetReset   = document.getElementById('btn-preset-reset');
 const btnPresetEdit    = document.getElementById('btn-preset-edit');
+const btnPresetExport  = document.getElementById('btn-preset-export');
+const btnPresetImport  = document.getElementById('btn-preset-import');
+const presetImportFile = document.getElementById('preset-import-file');
 const presetEditor     = document.getElementById('preset-editor');
 const presetEditLabel  = document.getElementById('preset-edit-label');
 const presetEditCmd    = document.getElementById('preset-edit-cmd');
@@ -1166,7 +1180,23 @@ function renderPresets() {
       if (!isEditingPresets) setPresetEditMode(true);
       openPresetEditor(idx);
     });
-    presetList.appendChild(btn);
+    if (isEditingPresets) {
+      const wrap = document.createElement('span');
+      wrap.className = 'preset-item';
+      const rm = document.createElement('button');
+      rm.className = 'preset-remove';
+      rm.textContent = '×';
+      rm.title = `Remove "${p.label}"`;
+      rm.addEventListener('click', e => {
+        e.stopPropagation();
+        presets.splice(idx, 1);
+        saveState({ presets });
+        if (editingPresetIdx !== null) { editingPresetIdx = null; presetEditor.hidden = true; }
+        renderPresets();
+      });
+      wrap.append(btn, rm);
+      presetList.appendChild(wrap);
+    } else presetList.appendChild(btn);
   });
 }
 
@@ -1176,6 +1206,8 @@ function setPresetEditMode(on) {
   btnPresetEdit.textContent = on ? 'DONE' : '✎';
   btnPresetAdd.hidden = !on;
   btnPresetReset.hidden = !on;
+  btnPresetExport.hidden = !on;
+  btnPresetImport.hidden = !on;
   if (!on) {
     closePresetEditor();
     focusTxIfConnected();
@@ -1218,6 +1250,36 @@ btnPresetReset.addEventListener('click', () => {
   presets = DEFAULT_PRESETS.map(p => ({ ...p }));
   saveState({ presets });
   closePresetEditor();
+});
+btnPresetExport.addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify({ presets }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'quick-buttons.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+btnPresetImport.addEventListener('click', () => presetImportFile.click());
+presetImportFile.addEventListener('change', async () => {
+  const file = presetImportFile.files[0];
+  presetImportFile.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const list = Array.isArray(data) ? data : data.presets;
+    if (!Array.isArray(list)) throw new Error('no presets array');
+    const valid = list.filter(p => p && typeof p.label === 'string' && typeof p.cmd === 'string')
+                      .map(p => ({ label: p.label, cmd: p.cmd }));
+    if (!valid.length) throw new Error('no valid buttons');
+    presets = valid;
+    saveState({ presets });
+    closePresetEditor();
+    syslog(`Imported ${valid.length} quick buttons.`);
+  } catch (err) {
+    syslog(`Import failed: ${err.message}`);
+  }
 });
 btnPresetSave.addEventListener('click', savePresetEdit);
 btnPresetDelete.addEventListener('click', () => {
