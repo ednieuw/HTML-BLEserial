@@ -2,18 +2,19 @@
 
 [Webpage terminal / serial monitor to connect to a BLE UART device.](https://ednieuw.com/BLESerial/BLE_UART_Terminal.html)
 
-To control microprocessors via a serial port or Bluetooth a serial terminal is used — a program that sends and receives ASCII characters.<br> 
-When a BLE device uses the TI CC2541 (HM-10, HM-16, JDY modules) or a Nordic nRF52 chipset (all ESP32s), [an app on a phone](https://ednieuw.com/BLESerial/IOSappMain.html) can be installed and used. <br>
+To control microprocessors via a serial port or Bluetooth a serial terminal is used. A serial terminal sends and receives ASCII characters.<br> 
+When a BLE device uses the TI CC2541 (HM-10, HM-16, JDY modules) or a Nordic nRF52 chipset (all ESP32s MCU's), [an app on a phone](https://ednieuw.com/BLESerial/IOSappMain.html) can be installed and used. <br>
 
 Since 2025, browsers like Chrome and Edge can simulate a serial terminal via BLE directly, without installing any app.<br>
 It is still experimental and behaves different on Windows 11 and MacOS Tahoe.
 
-With the iPhone and iPad this BLE-HTML serial terminal does not work (yet).<br> 
+With the iPhone and iPad this BLE-HTML serial terminal does not work yet (2026).<br> 
 In MacOS Tahoe and Windows 11 web-BLE does work.
+
 
 <img width="550" alt="Browser dialog listing nearby BLE devices to pair with" src="images/BLE_pair_dialog.png" />
 
-When the Connect is pressed some devices do not broadcast their name directly "Unknown or usupported Device" 
+When the Connect button is pressed some devices do not broadcast their name directly "Unknown or usupported Device" 
 
 This depends on the browser used and the OS of the computer. <br>
 
@@ -45,7 +46,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 - In Chrome, type `chrome://flags` in the address bar
 - In Edge, type `edge://flags`
 - Search for `bluetooth`
-- Make sure nothing is disabled. On some versions `#enable-web-bluetooth` needs to be explicitly enabled.
+- Make sure nothing is disabled.<br>On some versions `#enable-web-bluetooth` needs to be explicitly enabled.
 - Also enable: **Use the new permissions backend for Web Bluetooth** and **Web Bluetooth confirm pairing support**
 
 ---
@@ -53,7 +54,6 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 ## Usage
 
 1. Open `BLE_UART_Terminal.html` from [ednieuw.com](https://ednieuw.com/BLESerial/BLE_UART_Terminal.html) in Chrome or Edge
-   Or save the BLE_UART_Terminal.html from this repository on your device or web site.
 2. Click **⬡ CONNECT** — a browser dialog appears listing nearby BLE devices
 3. Select your device and click **Pair** (despite the label, no PIN or bond is required)
 4. The status indicator turns green and the device name appears in the header
@@ -65,6 +65,9 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 
 ## What's new since V1.1
 
+**V1.5**
+- Fits phone screens (tested on Samsung): the page height no longer includes the browser address/navigation bars, so the command line and stats are no longer cut off.<br> Header, options and stats wrap on narrow screens, and the input text is 16 px so the browser does not zoom in on focus.
+
 **V1.4**
 - Quick buttons can be edited in the page: change, add, remove (red **×** or **DEL**), reset to defaults, **EXPORT** to and **IMPORT** from a `quick-buttons.json` file.
 - The QUICK row now sits directly above the command line.
@@ -73,7 +76,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 - **↺ RECONNECT** button to connect to the last used device without scanning.
 - Connection setup is more robust: service discovery is retried together with the GATT connection, a double connect is prevented, and stale listeners are cleaned up on reconnect.
 - **ARROWS** option: the `◀` / `▶` direction indicators are now optional (off by default).
-- **ECHO** option: show sent commands in the terminal. If the device leaves an open prompt without a newline, the command appears inline after it.
+- **ECHO** option: show sent commands in the terminal.<br> If the device leaves an open prompt without a newline, the command appears inline after it.
 - Received text is decoded as a stream, so multi-byte characters and lines split over several BLE packets are shown correctly (CR, LF and CR+LF are all handled).
 - Sending uses a queue, so commands always go out in order, and picks the write method the device supports.
 - Pasting several lines sends them one by one.
@@ -86,9 +89,9 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 ## Features
 
 - **Connect with automatic retries:** the GATT connection and service discovery are retried up to 3 times (1 second apart), which helps on Windows.
-- **Reconnect button:** after a disconnect, or when the page is opened again, a **↺ RECONNECT** button appears for the last used device. It connects straight away without scanning (browsers that support `getDevices()` remember previously paired devices; otherwise the device from the current session is used).
-- **Receive in ASCII, HEX or BOTH:** choose the display format in the toolbar. In ASCII mode, partial lines are joined and CR, LF and CR+LF are all handled; BOTH shows the text and the hex bytes.
-- **Sending in 20-byte chunks with a send queue:** every command (including the selected line ending) is split into 20-byte pieces that fit a small BLE MTU. Commands are queued, so they are always sent in order, one after the other.
+- **Reconnect button:** after a disconnect, or when the page is opened again, a **↺ RECONNECT** button appears for the last used device.<br> It connects straight away without scanning (browsers that support `getDevices()` remember previously paired devices; otherwise the device from the current session is used).
+- **Receive in ASCII, HEX or BOTH:** choose the display format in the toolbar.<br> In ASCII mode, partial lines are joined and CR, LF and CR+LF are all handled; BOTH shows the text and the hex bytes.
+- **Sending in 20-byte chunks with a send queue:** every command (including the selected line ending) is split into 20-byte pieces that fit a small BLE MTU.<br> Commands are queued, so they are always sent in order, one after the other.
 - **Multi-line paste:** pasting text with several lines into the input field sends the lines one by one. Sending stops if the connection is lost or a write fails.
 - **Command history:** press **↑** / **↓** in the input field to step through previously sent commands (the last 50 are kept, also after a reload).
 - **Quick buttons:** one-click commands that can be edited, removed, exported and imported (see [Quick-send buttons](#quick-send-buttons)).
@@ -115,7 +118,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 | Chipset | Modules | Notes |
 |---|---|---|
 | Nordic nRF52 | ESP32, Arduino Nano ESP32 | Full support, all message lengths |
-| TI CC2541 | HM-10, HM-16, JDY-08 | Supported — sends one character at a time due to small MTU |
+| TI CC2541 | HM-10, HM-16, JDY-08 | Supported, sends one character at a time due to small MTU |
 | TI CC2511 | Various | Compatible |
 
 ### UUIDs used
@@ -134,9 +137,9 @@ RX (notify): 6E400003-B5A3-F393-E0A9-E50E24DCCA9E
 
 ## Windows notes
 
-- The browser picker shows all nearby BLE devices. Devices your firmware does not advertise the UART service for will appear greyed out and cannot be selected.
-- On Windows 11, the first GATT connection attempt sometimes fails. The terminal automatically retries up to 3 times with a 1-second delay between attempts.
-- Previously paired devices show **"- Paired"** in the picker. This is a Chrome/Windows label and cannot be removed from the webpage.
+- The browser picker shows all nearby BLE devices.<br>Devices your firmware does not advertise the UART service for will appear greyed out and cannot be selected.
+- On Windows 11, the first GATT connection attempt sometimes fails.<br>The terminal automatically retries up to 3 times with a 1-second delay between attempts.
+- Previously paired devices show **"- Paired"** in the picker.<br>This is a Chrome/Windows label and cannot be removed from the webpage.
 
 ---
 
@@ -158,7 +161,9 @@ Click **✎** at the end of the row to enter edit mode (the button changes to **
 
 ### Where the buttons are stored
 
-The quick buttons are saved in the browser's localStorage (key `bleUartTerminal.v1`), not in a file. They are tied to the browser, profile and address the page was opened from, and are lost when site data is cleared. Use **EXPORT** to keep a backup or to move the buttons to another browser or computer, and **IMPORT** to restore them.
+The quick buttons are saved in the browser's localStorage (key `bleUartTerminal.v1`), not in a file. <br>
+They are tied to the browser, profile and address the page was opened from, and are lost when site data is cleared.<br>
+Use **EXPORT** to keep a backup or to move the buttons to another browser or computer, and **IMPORT** to restore them.
 
 The export file looks like this (a plain JSON array of `{label, cmd}` objects is also accepted on import):
 
@@ -176,18 +181,28 @@ The export file looks like this (a plain JSON array of `{label, cmd}` objects is
 ## Troubleshooting
 
 **No devices appear in the picker**
-Your device may not be advertising the correct service UUID. Try moving closer to the device and ensure it is in advertising mode.
+Your device may not be advertising the correct service UUID.<br>
+Try moving closer to the device and ensure it is in advertising mode.
 
 **Connect failed: GATT Server is disconnected**
-Common on Windows with older BLE chipsets. The terminal retries automatically. If it keeps failing, remove the device from Windows Bluetooth settings and let the browser re-pair it.
+Common on Windows with older BLE chipsets.<br>
+The terminal retries automatically.<br>
+If it keeps failing, remove the device from Windows Bluetooth settings and let the browser re-pair it.
 
 **Arduino Nano ESP32 shows as "Unknown" in the terminal**
-The Arduino Nano ESP32 uses a u-blox ANNA-B112 module which has a known issue where the BLE device name is not properly exposed to Web Bluetooth in Chrome, even when the name is correctly set in firmware with `NimBLEDevice::init()` and `pAdvertising->setName()`. The device connects and works normally — only the name is missing. Other ESP32 variants (C3, S3, standard ESP32) broadcast their name correctly. This is a board-level limitation and cannot be worked around from the webpage.
+The Arduino Nano ESP32 uses a u-blox ANNA-B112 module which has a known issue where the BLE device name is not properly exposed to Web Bluetooth in Chrome, even when the name is correctly set in firmware with `NimBLEDevice::init()` and `pAdvertising->setName()`.<br>
+The device connects and works normally — only the name is missing.<br>
+Other ESP32 variants (C3, S3, standard ESP32) broadcast their name correctly.<br>
+This is a board-level limitation and cannot be worked around from the webpage.
 
 **Device only responds to the first character of a command**
-Check the line ending setting in the toolbar. Many devices require a specific line ending (**CR+LF**, **LF**, or **CR**) to recognise a complete command. If the wrong ending is selected the device may only process the first character. Try switching the dropdown until the device responds correctly.
+Check the line ending setting in the toolbar.<br>
+Many devices require a specific line ending (**CR+LF**, **LF**, or **CR**) to recognise a complete command.<br>
+If the wrong ending is selected the device may only process the first character.<br>
+Try switching the dropdown until the device responds correctly.
 
 **Works on Mac but not on Windows**
-Check the browser flags above. Also try unpairing the device in Windows Bluetooth settings and reconnecting via the browser.
+Check the browser flags above.<br>
+Also try unpairing the device in Windows Bluetooth settings and reconnecting via the browser.
 
 <img width="896" alt="BLE UART Terminal screenshot" src="https://github.com/user-attachments/assets/48aa3ccb-8bb8-40f5-8cb4-dfa19b6b3f6f" />
