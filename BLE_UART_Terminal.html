@@ -80,6 +80,7 @@ try {
   :root.light .toggle-thumb { transform: translateX(16px); background: var(--accent); }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
 
   html { height: 100%; }
 
@@ -460,7 +461,14 @@ try {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+    align-items: center;
     flex-shrink: 0;
+  }
+  .preset-list {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
   }
   .preset-label {
     font-size: 0.72rem;
@@ -474,6 +482,47 @@ try {
     padding: 5px 12px;
     border-color: var(--border);
   }
+  .presets.editing .preset-btn {
+    border-style: dashed;
+    border-color: var(--accent-dim);
+  }
+  .preset-btn.editing {
+    border-color: var(--tx-color);
+    color: var(--tx-color);
+  }
+  .preset-action {
+    font-size: 0.78rem;
+    padding: 5px 10px;
+    border-color: var(--border);
+  }
+  .preset-action.active {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+  .preset-editor {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .preset-editor input {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 8px;
+    outline: none;
+  }
+  .preset-editor input:focus { border-color: var(--accent-dim); }
+  #preset-edit-label { width: 140px; }
+  #preset-edit-cmd { flex: 1; min-width: 140px; }
+  .preset-editor button { font-size: 0.75rem; padding: 4px 10px; }
+  #btn-preset-delete { border-color: #8a2a2a; color: var(--red); }
 
   /* Stats bar */
   .stats {
@@ -547,14 +596,20 @@ try {
     <button id="btn-clear">CLR</button>
   </div>
 
-  <div class="presets">
+  <div class="presets" id="presets-bar">
     <span class="preset-label">QUICK:</span>
-    <button class="preset-btn" data-cmd="I">INFO</button>
-    <button class="preset-btn" data-cmd="T">TIME?</button>
-    <button class="preset-btn" data-cmd="S">SYNC</button>
-    <button class="preset-btn" data-cmd="R">RESET</button>
-    <button class="preset-btn" data-cmd="D">DEBUG</button>
-    <button class="preset-btn" data-cmd="H">HELP</button>
+    <div class="preset-list" id="preset-list"></div>
+    <button class="preset-action" id="btn-preset-add" title="Add quick button" hidden>+</button>
+    <button class="preset-action" id="btn-preset-reset" title="Reset quick buttons to defaults" hidden>↺</button>
+    <button class="preset-action" id="btn-preset-edit" title="Edit quick buttons">✎</button>
+  </div>
+
+  <div class="preset-editor" id="preset-editor" hidden>
+    <input type="text" id="preset-edit-label" placeholder="Label (e.g. INFO)" maxlength="24" autocomplete="off" spellcheck="false">
+    <input type="text" id="preset-edit-cmd" placeholder="Command (e.g. I)" autocomplete="off" spellcheck="false">
+    <button id="btn-preset-save">SAVE</button>
+    <button id="btn-preset-delete">DEL</button>
+    <button id="btn-preset-cancel">CANCEL</button>
   </div>
 
   <div class="terminal-wrapper">
@@ -582,6 +637,14 @@ const UART_RX_CHAR_UUID     = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify 
 
 const MAX_TERMINAL_LINES = 10000;
 const STORAGE_KEY = 'bleUartTerminal.v1';
+const DEFAULT_PRESETS = [
+  { label: 'INFO',  cmd: 'I' },
+  { label: 'TIME?', cmd: 'T' },
+  { label: 'SYNC',  cmd: 'S' },
+  { label: 'RESET', cmd: 'R' },
+  { label: 'DEBUG', cmd: 'D' },
+  { label: 'HELP',  cmd: 'H' },
+];
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let device = null, server = null, txChar = null, rxChar = null;
@@ -595,6 +658,9 @@ let isConnecting = false;
 let txQueue = Promise.resolve();
 const history = [];
 let histIdx = -1;
+let presets = DEFAULT_PRESETS.map(p => ({ ...p }));
+let isEditingPresets = false;
+let editingPresetIdx = null;
 
 // ─── DOM ─────────────────────────────────────────────────────────────────────
 const terminal     = document.getElementById('terminal');
@@ -616,6 +682,17 @@ const optEcho    = document.getElementById('opt-echo');
 const optNL      = document.getElementById('opt-newline');
 const optDisp    = document.getElementById('opt-display');
 const noBle      = document.getElementById('no-ble');
+const presetsBar       = document.getElementById('presets-bar');
+const presetList       = document.getElementById('preset-list');
+const btnPresetAdd     = document.getElementById('btn-preset-add');
+const btnPresetReset   = document.getElementById('btn-preset-reset');
+const btnPresetEdit    = document.getElementById('btn-preset-edit');
+const presetEditor     = document.getElementById('preset-editor');
+const presetEditLabel  = document.getElementById('preset-edit-label');
+const presetEditCmd    = document.getElementById('preset-edit-cmd');
+const btnPresetSave    = document.getElementById('btn-preset-save');
+const btnPresetDelete  = document.getElementById('btn-preset-delete');
+const btnPresetCancel  = document.getElementById('btn-preset-cancel');
 
 // ─── Persistence ─────────────────────────────────────────────────────────────
 function loadState() {
@@ -663,6 +740,11 @@ function restoreState() {
   if (Array.isArray(s.history)) {
     history.splice(0, history.length, ...s.history.filter(x => typeof x === 'string').slice(0, 50));
   }
+  if (Array.isArray(s.presets)) {
+    const valid = s.presets.filter(p => p && typeof p.label === 'string' && typeof p.cmd === 'string');
+    presets = valid.map(p => ({ label: p.label, cmd: p.cmd }));
+  }
+  renderPresets();
 }
 
 async function refreshReconnectButton() {
@@ -978,7 +1060,7 @@ function enableUI(connected) {
   if (connected) btnReconnect.hidden = true;
   txInput.disabled = !connected;
   btnSend.disabled = !connected;
-  document.querySelectorAll('.preset-btn').forEach(b => b.disabled = !connected);
+  document.querySelectorAll('.preset-btn').forEach(b => b.disabled = !connected && !isEditingPresets);
   if (connected) txInput.focus();
   else if (!btnToggle.disabled) btnToggle.focus();
 }
@@ -1054,10 +1136,89 @@ document.getElementById('btn-clear').addEventListener('click', () => {
   syslog('Terminal cleared.');
 });
 
-document.querySelectorAll('.preset-btn').forEach(btn => {
-  btn.disabled = true;
-  btn.addEventListener('click', () => {
-    send(btn.dataset.cmd);
+// ─── Quick-send presets ──────────────────────────────────────────────────────
+function renderPresets() {
+  presetList.innerHTML = '';
+  presetsBar.classList.toggle('editing', isEditingPresets);
+  presets.forEach((p, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    if (isEditingPresets && editingPresetIdx === idx) btn.classList.add('editing');
+    btn.textContent = p.label;
+    btn.title = isEditingPresets ? `Edit "${p.label}" (${p.cmd})` : p.cmd;
+    btn.disabled = !txChar && !isEditingPresets;
+    btn.addEventListener('click', () => {
+      if (isEditingPresets) openPresetEditor(idx);
+      else send(p.cmd);
+    });
+    btn.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      if (!isEditingPresets) setPresetEditMode(true);
+      openPresetEditor(idx);
+    });
+    presetList.appendChild(btn);
+  });
+}
+
+function setPresetEditMode(on) {
+  isEditingPresets = on;
+  btnPresetEdit.classList.toggle('active', on);
+  btnPresetEdit.textContent = on ? 'DONE' : '✎';
+  btnPresetAdd.hidden = !on;
+  btnPresetReset.hidden = !on;
+  if (!on) closePresetEditor();
+  else renderPresets();
+}
+
+function openPresetEditor(idx) {
+  editingPresetIdx = idx;
+  const isNew = idx < 0;
+  presetEditLabel.value = isNew ? '' : presets[idx].label;
+  presetEditCmd.value = isNew ? '' : presets[idx].cmd;
+  btnPresetDelete.hidden = isNew;
+  presetEditor.hidden = false;
+  renderPresets();
+  presetEditLabel.focus();
+}
+
+function closePresetEditor() {
+  editingPresetIdx = null;
+  presetEditor.hidden = true;
+  renderPresets();
+}
+
+function savePresetEdit() {
+  if (editingPresetIdx === null) return;
+  const cmd = presetEditCmd.value;
+  const label = presetEditLabel.value.trim() || cmd.trim();
+  if (!label) return;
+  const entry = { label, cmd };
+  if (editingPresetIdx < 0) presets.push(entry);
+  else presets[editingPresetIdx] = entry;
+  saveState({ presets });
+  closePresetEditor();
+}
+
+btnPresetEdit.addEventListener('click', () => setPresetEditMode(!isEditingPresets));
+btnPresetAdd.addEventListener('click', () => openPresetEditor(-1));
+btnPresetReset.addEventListener('click', () => {
+  presets = DEFAULT_PRESETS.map(p => ({ ...p }));
+  saveState({ presets });
+  closePresetEditor();
+});
+btnPresetSave.addEventListener('click', savePresetEdit);
+btnPresetDelete.addEventListener('click', () => {
+  if (editingPresetIdx !== null && editingPresetIdx >= 0) {
+    presets.splice(editingPresetIdx, 1);
+    saveState({ presets });
+  }
+  closePresetEditor();
+});
+btnPresetCancel.addEventListener('click', closePresetEditor);
+[presetEditLabel, presetEditCmd].forEach(el => {
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); savePresetEdit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); closePresetEditor(); }
   });
 });
 
