@@ -444,6 +444,7 @@
 
   <div class="controls">
     <button id="btn-toggle">⬡ CONNECT</button>
+    <button id="btn-reconnect" hidden>↺ RECONNECT</button>
     <div class="separator"></div>
     <div class="options">
       <label><input type="checkbox" id="opt-timestamp"> TIMESTAMP</label>
@@ -499,9 +500,12 @@ const UART_TX_CHAR_UUID     = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write (
 const UART_RX_CHAR_UUID     = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify (device→host)
 
 const MAX_TERMINAL_LINES = 10000;
+const STORAGE_KEY = 'bleUartTerminal.v1';
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let device = null, server = null, txChar = null, rxChar = null;
+let rememberedDevice = null;
+let sessionDevice = null;
 let rxBytes = 0, txBytes = 0, msgCount = 0;
 let currentRxMsg = null;
 let lastRxWasCR = false;
@@ -512,10 +516,11 @@ const history = [];
 let histIdx = -1;
 
 // ─── DOM ─────────────────────────────────────────────────────────────────────
-const terminal   = document.getElementById('terminal');
-const txInput    = document.getElementById('tx-input');
-const btnToggle  = document.getElementById('btn-toggle');
-const btnSend    = document.getElementById('btn-send');
+const terminal     = document.getElementById('terminal');
+const txInput      = document.getElementById('tx-input');
+const btnToggle    = document.getElementById('btn-toggle');
+const btnReconnect = document.getElementById('btn-reconnect');
+const btnSend      = document.getElementById('btn-send');
 const statusDot  = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 const deviceName = document.getElementById('device-name');
@@ -530,6 +535,77 @@ const optEcho    = document.getElementById('opt-echo');
 const optNL      = document.getElementById('opt-newline');
 const optDisp    = document.getElementById('opt-display');
 const noBle      = document.getElementById('no-ble');
+
+// ─── Persistence ─────────────────────────────────────────────────────────────
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveState(extra = {}) {
+  try {
+    const prev = loadState();
+    const state = {
+      ...prev,
+      timestamp: optTS.checked,
+      autoscroll: optScroll.checked,
+      dir: optDir.checked,
+      echo: optEcho.checked,
+      newline: optNL.value,
+      display: optDisp.value,
+      history: history.slice(0, 50),
+      ...extra,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (_) {}
+}
+
+function restoreState() {
+  const s = loadState();
+  if (typeof s.timestamp === 'boolean') optTS.checked = s.timestamp;
+  if (typeof s.autoscroll === 'boolean') optScroll.checked = s.autoscroll;
+  if (typeof s.dir === 'boolean') optDir.checked = s.dir;
+  if (typeof s.echo === 'boolean') optEcho.checked = s.echo;
+  if (['crlf', 'lf', 'cr', 'none'].includes(s.newline)) optNL.value = s.newline;
+  if (['ascii', 'hex', 'both'].includes(s.display)) optDisp.value = s.display;
+
+  terminal.classList.toggle('hide-dir', !optDir.checked);
+
+  if (Array.isArray(s.history)) {
+    history.splice(0, history.length, ...s.history.filter(x => typeof x === 'string').slice(0, 50));
+  }
+}
+
+async function refreshReconnectButton() {
+  rememberedDevice = null;
+  btnReconnect.hidden = true;
+  if (txChar || !navigator.bluetooth) return;
+  const { lastDevice } = loadState();
+  if (typeof navigator.bluetooth.getDevices === 'function') {
+    try {
+      const devices = await navigator.bluetooth.getDevices();
+      if (devices.length) {
+        rememberedDevice = (lastDevice && devices.find(d => d.id === lastDevice.id)) || devices[0];
+      }
+    } catch (_) {}
+  }
+  if (!rememberedDevice && sessionDevice) {
+    rememberedDevice = sessionDevice;
+  }
+  if (rememberedDevice) {
+    const label = rememberedDevice.name || (lastDevice && lastDevice.name) || 'last device';
+    btnReconnect.title = `Reconnect to ${label}`;
+    btnReconnect.hidden = false;
+  }
+  if (!txChar && !isConnecting) {
+    if (!btnReconnect.hidden && !btnReconnect.disabled) btnReconnect.focus();
+    else if (!btnToggle.disabled) btnToggle.focus();
+  }
+}
 
 // ─── Check Web Bluetooth ─────────────────────────────────────────────────────
 if (!navigator.bluetooth) {
@@ -580,59 +656,59 @@ function syslog(msg) { log(msg, 'sys'); }
 function errlog(msg) { log(msg, 'err'); }
 
 // ─── Connect ─────────────────────────────────────────────────────────────────
-async function connect() {
+async function connectToDevice(dev) {
+  // Chrome reuses the same BluetoothDevice instance across reconnects; strip any stale listener
+  dev.removeEventListener('gattserverdisconnected', onDisconnected);
+  device = dev;
+
+  syslog(`Found: ${dev.name || 'Unknown'}`);
+
+  // Windows BLE often drops the first GATT connect or service discovery — retry full setup up to 3x
+  let retries = 3;
+  while (retries--) {
+    try {
+      server = await dev.gatt.connect();
+      syslog('GATT connected, discovering services…');
+
+      const service = await server.getPrimaryService(UART_SERVICE_UUID);
+      statSvc.textContent = `SERVICE: NUS`;
+
+      txChar = await service.getCharacteristic(UART_TX_CHAR_UUID);
+      rxChar = await service.getCharacteristic(UART_RX_CHAR_UUID);
+
+      rxChar.removeEventListener('characteristicvaluechanged', onRx);
+      await rxChar.startNotifications();
+      rxChar.addEventListener('characteristicvaluechanged', onRx);
+      break;
+    } catch (e) {
+      if (rxChar) rxChar.removeEventListener('characteristicvaluechanged', onRx);
+      if (dev.gatt && dev.gatt.connected) {
+        dev.gatt.disconnect();
+      }
+      server = null; txChar = null; rxChar = null;
+      if (retries === 0) throw e;
+      syslog(`GATT setup failed, retrying… (${retries} left)`);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+
+  dev.addEventListener('gattserverdisconnected', onDisconnected);
+  sessionDevice = dev;
+  saveState({ lastDevice: { id: dev.id, name: dev.name || '' } });
+  setStatus('connected', dev.name || 'Unknown');
+  log(`Connected to [${dev.name || 'Unknown'}] — ready.`, 'ok');
+  enableUI(true);
+}
+
+async function runConnect(getDevice) {
   if (isConnecting) return;
   isConnecting = true;
   btnToggle.disabled = true;
+  btnReconnect.disabled = true;
   try {
     setStatus('connecting');
-    syslog('Scanning for BLE UART devices…');
-
-    const dev = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [UART_SERVICE_UUID] }],
-      optionalServices: [UART_SERVICE_UUID],
-      // Skip OS pairing dialog where possible
-    });
-    // Chrome reuses the same BluetoothDevice instance across reconnects; strip any stale listener
-    dev.removeEventListener('gattserverdisconnected', onDisconnected);
-    device = dev;
-
-    syslog(`Found: ${dev.name || 'Unknown'}`);
-
-    // Windows BLE often drops the first GATT connect or service discovery — retry full setup up to 3x
-    let retries = 3;
-    while (retries--) {
-      try {
-        server = await dev.gatt.connect();
-        syslog('GATT connected, discovering services…');
-
-        const service = await server.getPrimaryService(UART_SERVICE_UUID);
-        statSvc.textContent = `SERVICE: NUS`;
-
-        txChar = await service.getCharacteristic(UART_TX_CHAR_UUID);
-        rxChar = await service.getCharacteristic(UART_RX_CHAR_UUID);
-
-        rxChar.removeEventListener('characteristicvaluechanged', onRx);
-        await rxChar.startNotifications();
-        rxChar.addEventListener('characteristicvaluechanged', onRx);
-        break;
-      } catch (e) {
-        if (rxChar) rxChar.removeEventListener('characteristicvaluechanged', onRx);
-        if (dev.gatt && dev.gatt.connected) {
-          dev.gatt.disconnect();
-        }
-        server = null; txChar = null; rxChar = null;
-        if (retries === 0) throw e;
-        syslog(`GATT setup failed, retrying… (${retries} left)`);
-        await new Promise(r => setTimeout(r, 1000));
-      }
-    }
-
-    dev.addEventListener('gattserverdisconnected', onDisconnected);
-    setStatus('connected', dev.name || 'Unknown');
-    log(`Connected to [${dev.name || 'Unknown'}] — ready.`, 'ok');
-    enableUI(true);
-
+    const dev = await getDevice();
+    await connectToDevice(dev);
   } catch (err) {
     if (rxChar) rxChar.removeEventListener('characteristicvaluechanged', onRx);
     if (device && device.gatt && device.gatt.connected) {
@@ -647,8 +723,29 @@ async function connect() {
   } finally {
     isConnecting = false;
     btnToggle.disabled = false;
-    if (!txChar) btnToggle.focus();
+    btnReconnect.disabled = false;
+    refreshReconnectButton();
   }
+}
+
+function connect() {
+  return runConnect(() => {
+    syslog('Scanning for BLE UART devices…');
+    return navigator.bluetooth.requestDevice({
+      filters: [{ services: [UART_SERVICE_UUID] }],
+      optionalServices: [UART_SERVICE_UUID],
+      // Skip OS pairing dialog where possible
+    });
+  });
+}
+
+function reconnect() {
+  if (!rememberedDevice) return;
+  const target = rememberedDevice;
+  return runConnect(() => {
+    syslog(`Reconnecting to [${target.name || 'Unknown'}]…`);
+    return Promise.resolve(target);
+  });
 }
 
 // ─── Disconnect ──────────────────────────────────────────────────────────────
@@ -671,6 +768,7 @@ function onDisconnected(event) {
   enableUI(false);
   syslog('Device disconnected.');
   device = null; server = null; txChar = null; rxChar = null;
+  refreshReconnectButton();
 }
 
 // ─── RX ──────────────────────────────────────────────────────────────────────
@@ -767,6 +865,7 @@ async function sendNow(text) {
     if (text.length && history[0] !== text) history.unshift(text);
     if (history.length > 50) history.pop();
     histIdx = -1;
+    saveState();
     return true;
   } catch (err) {
     if (txEl && txEl.parentNode) {
@@ -791,6 +890,7 @@ function setStatus(state, name = '—') {
 function enableUI(connected) {
   btnToggle.textContent = connected ? '✕ DISCONNECT' : '⬡ CONNECT';
   btnToggle.classList.toggle('connected', connected);
+  if (connected) btnReconnect.hidden = true;
   txInput.disabled = !connected;
   btnSend.disabled = !connected;
   document.querySelectorAll('.preset-btn').forEach(b => b.disabled = !connected);
@@ -803,6 +903,7 @@ btnToggle.addEventListener('click', () => {
   if (device && device.gatt && device.gatt.connected) disconnect();
   else connect();
 });
+btnReconnect.addEventListener('click', reconnect);
 btnSend.addEventListener('click', () => {
   send(txInput.value);
   txInput.value = '';
@@ -854,6 +955,10 @@ txInput.addEventListener('paste', async e => {
 
 optDir.addEventListener('change', () => {
   terminal.classList.toggle('hide-dir', !optDir.checked);
+  saveState();
+});
+[optTS, optScroll, optEcho, optNL, optDisp].forEach(el => {
+  el.addEventListener('change', () => saveState());
 });
 
 document.getElementById('btn-clear').addEventListener('click', () => {
@@ -872,9 +977,10 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
 });
 
 // ─── Startup ─────────────────────────────────────────────────────────────────
+restoreState();
+refreshReconnectButton();
 syslog('BLE UART Terminal ready. Click CONNECT to scan for devices.');
 syslog('Using Nordic UART Service (NUS) — compatible with most word clock firmware.');
-if (!btnToggle.disabled) btnToggle.focus();
 </script>
 </body>
 </html>
