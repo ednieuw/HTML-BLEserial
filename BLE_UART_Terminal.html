@@ -1120,12 +1120,20 @@ txInput.addEventListener('paste', async e => {
   }
 });
 
+function focusTxIfConnected() {
+  if (txChar && !txInput.disabled) txInput.focus();
+}
+
 optDir.addEventListener('change', () => {
   terminal.classList.toggle('hide-dir', !optDir.checked);
   saveState();
+  focusTxIfConnected();
 });
 [optTS, optScroll, optEcho, optNL, optDisp].forEach(el => {
-  el.addEventListener('change', () => saveState());
+  el.addEventListener('change', () => {
+    saveState();
+    focusTxIfConnected();
+  });
 });
 
 document.getElementById('btn-clear').addEventListener('click', () => {
@@ -1134,6 +1142,7 @@ document.getElementById('btn-clear').addEventListener('click', () => {
   rxDecoder = new TextDecoder();
   terminal.innerHTML = '';
   syslog('Terminal cleared.');
+  focusTxIfConnected();
 });
 
 // ─── Quick-send presets ──────────────────────────────────────────────────────
@@ -1149,7 +1158,10 @@ function renderPresets() {
     btn.disabled = !txChar && !isEditingPresets;
     btn.addEventListener('click', () => {
       if (isEditingPresets) openPresetEditor(idx);
-      else send(p.cmd);
+      else {
+        send(p.cmd);
+        focusTxIfConnected();
+      }
     });
     btn.addEventListener('contextmenu', e => {
       e.preventDefault();
@@ -1166,7 +1178,10 @@ function setPresetEditMode(on) {
   btnPresetEdit.textContent = on ? 'DONE' : '✎';
   btnPresetAdd.hidden = !on;
   btnPresetReset.hidden = !on;
-  if (!on) closePresetEditor();
+  if (!on) {
+    closePresetEditor();
+    focusTxIfConnected();
+  }
   else renderPresets();
 }
 
@@ -1226,6 +1241,7 @@ btnPresetCancel.addEventListener('click', closePresetEditor);
 document.getElementById('theme-switch').addEventListener('click', () => {
   document.documentElement.classList.toggle('light');
   saveState();
+  focusTxIfConnected();
 });
 
 // ─── Startup ─────────────────────────────────────────────────────────────────
