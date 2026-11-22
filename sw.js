@@ -1,4 +1,4 @@
-const CACHE = 'pwa-v1';
+const CACHE = 'pwa-v2';
 const FILES = ['./BLE_UART_Terminal.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 self.addEventListener('install', e => {
@@ -21,6 +21,8 @@ self.addEventListener('fetch', e => {
         }
         return res;
       })
-      .catch(() => caches.match(e.request))
+      .catch(() => caches.match(e.request).then(r =>
+        r || (e.request.mode === 'navigate' ? caches.match('./BLE_UART_Terminal.html') : undefined)
+      ))
   );
 });
