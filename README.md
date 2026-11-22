@@ -66,7 +66,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 ## What's new since V1.1
 
 **V1.6**
-- Mobile & tablet virtual-keyboard and short-viewport fixes: `interactive-widget=resizes-content`, locked `html, body` overflow/overscroll, `visualViewport` height sync fallback, single-row horizontally scrollable controls/quick-buttons on small/short screens, global `safe-area-inset` padding, touch-friendly target sizing, and fine-pointer-only auto-focus so the keyboard doesn't pop up unexpectedly.
+- Mobile & tablet virtual-keyboard and short-viewport fixes: `interactive-widget=resizes-content`,<br>locked `html, body` overflow/overscroll, `visualViewport` height sync fallback,<br>single-row horizontally scrollable controls/quick-buttons on small/short screens,<br>global `safe-area-inset` padding,<br>touch-friendly target sizing,<br>and fine-pointer-only auto-focus so the keyboard doesn't pop up unexpectedly.
 
 **V1.5**
 - Fits phone screens (tested on Samsung): the page height no longer includes the browser address/navigation bars, so the command line and stats are no longer cut off.<br> Header, options and stats wrap on narrow screens, and the input text is 16 px so the browser does not zoom in on focus.
