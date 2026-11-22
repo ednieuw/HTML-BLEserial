@@ -97,6 +97,15 @@ jobs:
           </html>
           EOF
 
+      - name: Upload release assets
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.version || github.ref_name }}
+        run: |
+          (cd _site && zip -r "../BLE_UART_Terminal-${TAG}.zip" BLE_UART_Terminal.html manifest.webmanifest sw.js icons)
+          gh release upload "$TAG" _site/BLE_UART_Terminal.html "BLE_UART_Terminal-${TAG}.zip" --clobber
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
