@@ -31,6 +31,39 @@ The broadcast name is then often displayed.
 
 ---
 
+## Mondriaan version and install as an app (PWA)
+
+A second look, in the style of Piet Mondriaan: white and cream with thick black grid lines and red, yellow and blue blocks. It has the same functions as the standard version and also a light and dark theme (sun/moon switch).
+
+[Open the Mondriaan version](https://ednieuw.com/BLESerial/BLE_UART_Terminal_Mondriaan.html)
+
+<img width="800" alt="BLE UART Terminal in Mondriaan style, light theme" src="images/BLE_Mondriaan_light.png" />
+
+<img width="800" alt="BLE UART Terminal in Mondriaan style, dark theme" src="images/BLE_Mondriaan_dark.png" />
+
+### Install as an app with its own icon
+
+Open one of the app versions in Chrome or Edge (Android, Windows, macOS) and choose **Install app**. The app starts like a normal app and also without internet.
+
+- [Standard version as installable app](https://ednieuw.com/BLESerial/PWA/)
+- [Mondriaan version as installable app](https://ednieuw.com/BLESerial/PWA-Mondriaan/)
+
+| Version | Page | Installable app (folder) |
+|---|---|---|
+| Standard | [BLE_UART_Terminal.html](https://ednieuw.com/BLESerial/BLE_UART_Terminal.html) | [PWA/](https://ednieuw.com/BLESerial/PWA/) |
+| Mondriaan | [BLE_UART_Terminal_Mondriaan.html](https://ednieuw.com/BLESerial/BLE_UART_Terminal_Mondriaan.html) | [PWA-Mondriaan/](https://ednieuw.com/BLESerial/PWA-Mondriaan/) |
+
+Each PWA folder contains `index.html`, `manifest.webmanifest`, `sw.js` (service worker) and `icons/`. Upload the whole folder to the web server; the page must be served over `https://`.
+
+### Manuals
+
+Scan the QR code in the manual or click a link:
+- [Manual in English (PDF)](manual/Manual_BLE_UART_Terminal_UK.pdf)
+- [Handleiding in het Nederlands (PDF)](manual/Handleiding_BLE_UART_Terminal_NL.pdf)
+- QR codes: [standard](manual/qr-ble-uart-terminal.png), [Mondriaan](manual/qr-ble-uart-terminal-mondriaan.png) (they point to the two installable apps above)
+
+---
+
 ## Requirements
 
 - **Browser:** Chrome or Edge (desktop or Android). Safari and Firefox do not support Web Bluetooth.
@@ -65,8 +98,12 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 
 ## What's new since V1.1
 
-**V1.6**
-- Mobile & tablet virtual-keyboard and short-viewport fixes: `interactive-widget=resizes-content`,<br>locked `html, body` overflow/overscroll, `visualViewport` height sync fallback,<br>single-row horizontally scrollable controls/quick-buttons on small/short screens,<br>global `safe-area-inset` padding,<br>touch-friendly target sizing,<br>and fine-pointer-only auto-focus so the keyboard doesn't pop up unexpectedly.
+**V1.6** (better behaviour with the on-screen keyboard on phones and tablets)
+- The page resizes to the space left above the on-screen keyboard (`interactive-widget=resizes-content` plus a `visualViewport` fallback), so the command line stays visible while typing and the page no longer scrolls or bounces.
+- On small or short screens (portrait phone, landscape phone, keyboard open) the toolbar and the quick buttons stay on a single row that scrolls sideways. The header's version line is hidden on very short screens and the stats line on very low ones, to leave room for the terminal.
+- Padding respects the safe areas (notch, rounded corners, gesture bar) on all sides.
+- Touch screens get larger buttons, dropdowns and checkboxes (at least 36 px).
+- The input field and CONNECT button are only focused automatically on devices with a mouse, so the keyboard no longer pops up unexpectedly on a phone.
 
 **V1.5**
 - Fits phone screens (tested on Samsung): the page height no longer includes the browser address/navigation bars, so the command line and stats are no longer cut off.<br> Header, options and stats wrap on narrow screens, and the input text is 16 px so the browser does not zoom in on focus.
