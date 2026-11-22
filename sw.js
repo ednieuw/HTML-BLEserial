@@ -1,5 +1,5 @@
 const CACHE = 'pwa-v1';
-const FILES = ['./', './index.html', './manifest.webmanifest',
+const FILES = ['./BLE_UART_Terminal.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

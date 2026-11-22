@@ -2,7 +2,7 @@
   "name": "BLE UART Terminal",
   "short_name": "BLE UART",
   "description": "Serial terminal for Bluetooth LE UART devices (Nordic UART Service)",
-  "start_url": "./index.html",
+  "start_url": "./BLE_UART_Terminal.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#fafafa",

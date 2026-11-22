@@ -41,20 +41,16 @@ A second look, in the style of Piet Mondriaan (white and cream with thick black 
 
 ### Install as an app with its own icon
 
-Open the app version in Chrome or Edge (Android, Windows, macOS) and choose **Install app**. The app starts like a normal app and also without internet.
+Open [BLE_UART_Terminal.html](https://ednieuw.com/BLESerial/BLE_UART_Terminal.html) in Chrome or Edge (Android, Windows, macOS) and choose **Install app**. The app starts like a normal app and also works without internet.
 
-| Version | Page | Installable app (folder) |
-|---|---|---|
-| Standalone / PWA | [BLE_UART_Terminal.html](https://ednieuw.com/BLESerial/BLE_UART_Terminal.html) | [PWA/](https://ednieuw.com/BLESerial/PWA/) |
-
-The `PWA/` folder contains `index.html`, `manifest.webmanifest`, `sw.js` (service worker) and `icons/`. Upload the whole folder to the web server; the page must be served over `https://`.
+To host it as an installable PWA on your own server, upload `BLE_UART_Terminal.html`, `manifest.webmanifest`, `sw.js` (service worker) and `icons/` together into the same folder over `https://`. (Downloading `BLE_UART_Terminal.html` by itself still works as a standalone file.)
 
 ### Manuals
 
 Scan the QR code in the manual or click a link:
 - [Manual in English (PDF)](manual/Manual_BLE_UART_Terminal_UK.pdf)
 - [Handleiding in het Nederlands (PDF)](manual/Handleiding_BLE_UART_Terminal_NL.pdf)
-- QR code: [PWA](manual/qr-ble-uart-terminal.png)
+- QR code: [BLE UART Terminal](manual/qr-ble-uart-terminal.png)
 
 ---
 
@@ -93,8 +89,8 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 ## What's new since V1.1
 
 **V1.7**
-- Merged the Mondriaan themes into a unified `data-theme` selector (**Light**, **Dark**, **Mondriaan**, **Mondriaan Dark**) in both `BLE_UART_Terminal.html` and `PWA/index.html`, removing the duplicate Mondriaan files.
-- Updated `PWA/sw.js` to use network-first caching with offline fallback so installed apps pick up updates automatically.
+- Merged the Mondriaan themes into a unified `data-theme` selector (**Light**, **Dark**, **Mondriaan**, **Mondriaan Dark**) in `BLE_UART_Terminal.html`, removing the duplicate Mondriaan files.
+- Combined `PWA/index.html` into `BLE_UART_Terminal.html` (with `manifest.webmanifest`, `sw.js`, and `icons/` in the same folder) and updated `sw.js` to use network-first caching with offline fallback.
 
 **V1.6** (better behaviour with the on-screen keyboard on phones and tablets)
 - The page resizes to the space left above the on-screen keyboard (`interactive-widget=resizes-content` plus a `visualViewport` fallback), so the command line stays visible while typing and the page no longer scrolls or bounces.
