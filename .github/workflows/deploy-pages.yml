@@ -75,10 +75,14 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Assemble site artifact
+        env:
+          TAG: ${{ needs.release.outputs.version || github.ref_name }}
         run: |
+          VER="${TAG#v}"
           mkdir -p _site
           cp BLE_UART_Terminal.html manifest.webmanifest sw.js _site/
           cp -r icons manual images _site/
+          sed -i "s/V0\.0-dev/V${VER}/g" _site/BLE_UART_Terminal.html
           cat > _site/index.html <<'EOF'
           <!DOCTYPE html>
           <html lang="en">
