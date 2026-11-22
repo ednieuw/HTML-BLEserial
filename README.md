@@ -89,8 +89,8 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 ## What's new since V1.1
 
 **V1.7**
-- Merged the Mondriaan themes into a unified `data-theme` selector (**Light**, **Dark**, **Mondriaan**, **Mondriaan Dark**) in `BLE_UART_Terminal.html`, removing the duplicate Mondriaan files.
-- Combined `PWA/index.html` into `BLE_UART_Terminal.html` (with `manifest.webmanifest`, `sw.js`, and `icons/` in the same folder) and updated `sw.js` to use network-first caching with offline fallback.
+- Merged the Mondriaan themes into a unified `data-theme` selector (**LIGHT**, **DARK**, **MONDRIAAN**, **MONDRIAAN DARK**) in `BLE_UART_Terminal.html`, removing the duplicate Mondriaan files.
+- Combined `PWA/index.html` into `BLE_UART_Terminal.html` (with `manifest.webmanifest`, `sw.js`, and `icons/` in the same folder), removed the `'./'` entry from `sw.js` so Chrome installs reliably, and switched `sw.js` to network-first caching with offline fallback.
 
 **V1.6** (better behaviour with the on-screen keyboard on phones and tablets)
 - The page resizes to the space left above the on-screen keyboard (`interactive-widget=resizes-content` plus a `visualViewport` fallback), so the command line stays visible while typing and the page no longer scrolls or bounces.
@@ -144,7 +144,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 | ECHO | Echo sent commands in the terminal (off by default; enable if the device does not echo commands itself) |
 | CR+LF / LF / CR / NONE | Line ending appended to each sent command |
 | ASCII / HEX / BOTH | Display format for received data |
-| Light/Dark theme switch | Choose between light or dark theme |
+| Theme selector | Choose between **LIGHT**, **DARK**, **MONDRIAAN**, or **MONDRIAAN DARK** |
 ---
 
 ## Device compatibility
