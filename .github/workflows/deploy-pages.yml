@@ -1,0 +1,123 @@
+name: Release & Deploy to GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (format: v0.0, e.g. v1.7)'
+        required: true
+        default: 'v0.0'
+        type: string
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.create.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate and create release tag
+        id: create
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "$VERSION" == "v0.0" || ! "$VERSION" =~ ^v[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version '$VERSION'. Replace v0.0 with a real version (e.g. v1.7)."
+            exit 1
+          fi
+
+          git fetch --tags origin
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag '$VERSION' already exists."
+            exit 1
+          fi
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "::error::GitHub Release '$VERSION' already exists."
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+          gh release create "$VERSION" --title "$VERSION" --generate-notes
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: release
+    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.version || github.ref }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Assemble site artifact
+        env:
+          TAG: ${{ needs.release.outputs.version || github.ref_name }}
+        run: |
+          VER="${TAG#v}"
+          mkdir -p _site
+          cp BLE_UART_Terminal.html manifest.webmanifest sw.js _site/
+          cp -r icons manual images _site/
+          sed -i "s/V0\.0-dev/V${VER}/g" _site/BLE_UART_Terminal.html
+          cat > _site/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta http-equiv="refresh" content="0; url=./BLE_UART_Terminal.html">
+            <title>BLE UART Terminal</title>
+          </head>
+          <body>
+            <a href="./BLE_UART_Terminal.html">Open BLE UART Terminal</a>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload release assets
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.version || github.ref_name }}
+        run: |
+          (cd _site && zip -r "../BLE_UART_Terminal-${TAG}.zip" BLE_UART_Terminal.html manifest.webmanifest sw.js icons)
+          gh release upload "$TAG" _site/BLE_UART_Terminal.html "BLE_UART_Terminal-${TAG}.zip" --clobber
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
