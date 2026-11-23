@@ -1,26 +1,28 @@
 # HTML-BLEserial
 
-[Webpage terminal / serial monitor to connect to a BLE UART device.](https://ednieuw.com/BLESerial/BLE_UART_Terminal.html)
+[Version controlled BLE_UART_Terminal on ednieuw.github.io](https://ednieuw.github.io/HTML-BLEserial/BLE_UART_Terminal.html)
+
+I keep a non version controlled version to control [my wordclocks](https://github.com/ednieuw/Arduino-ESP32-Nano-Wordclock) on my web site here: [BLE_UART_Terminal V1.7](https://ednieuw.com/BLESerial/BLE_UART_Terminal.html)
 
 To control microprocessors via a serial port or Bluetooth a serial terminal is used. A serial terminal sends and receives ASCII characters.<br> 
-When a BLE device uses the TI CC2541 (HM-10, HM-16, JDY modules) or a Nordic nRF52 chipset (all ESP32s MCU's), [an app on a phone](https://ednieuw.com/BLESerial/IOSappMain.html) can be installed and used. <br>
+When a BLE device uses the TI CC2541 (HM-10, HM-16, JDY modules) or a Nordic nRF52 chipset (all ESP32s MCU's), [an app on a phone or tablet](https://ednieuw.com/BLESerial/IOSappMain.html) can be installed and used. <br>
 
 Since 2025, browsers like Chrome and Edge can simulate a serial terminal via BLE directly, without installing any app.<br>
 It is still experimental and behaves different on Windows 11 and MacOS Tahoe.
 
-With the iPhone and iPad this BLE-HTML serial terminal does not work yet (2026).<br> 
+With the iPhone and iPad this BLE-HTML serial terminal does not work without an extra app, Bluefy (2026).<br> 
 In MacOS Tahoe and Windows 11 web-BLE does work.
 
 
-<img width="550" alt="Browser dialog listing nearby BLE devices to pair with" src="images/BLE_pair_dialog.png" />
+![Browser dialog listing nearby BLE devices to pair with](images/BLE_pair_dialog.png)
 
-When the Connect button is pressed some devices do not broadcast their name directly "Unknown or usupported Device" 
+When the Connect button is pressed some devices do not broadcast their name directly "Unknown or unsupported Device" 
 
 This depends on the browser used and the OS of the computer. <br>
 
 On MacOS Tahoe in Chrome  it works as expected but on my W11 PC from 2020 with a 6 year old Bluetooth it has to pair before showing its broadcast name.
 
-After Pairing/connnecting: Connect failed: GATT Server is disconnected. Cannot retrieve services. (Re)connect first with `device.gatt.connect`<br>
+After Pairing/connecting: Connect failed: GATT Server is disconnected. Cannot retrieve services. (Re)connect first with `device.gatt.connect`<br>
 
 Connect again and it will connect.<br>
 The broadcast name is then often displayed.  
@@ -31,13 +33,25 @@ The broadcast name is then often displayed.
 
 ---
 
-## Mondriaan theme and install as an app (PWA)
+## Themes
 
-A second look, in the style of Piet Mondriaan (white and cream with thick black grid lines and red, yellow and blue blocks), is built into the theme selector alongside **Light** and **Dark** (**Light**, **Dark**, **Mondriaan**, **Mondriaan Dark**).
+The theme can be chosen with the selector at the top right: **LIGHT**, **DARK**, **MONDRIAAN** and **MONDRIAAN DARK**. The Mondriaan themes are in the style of Piet Mondriaan: white and cream (or black) with thick grid lines and red, yellow and blue blocks. The choice is remembered in the browser.
 
-<img width="800" alt="BLE UART Terminal in Mondriaan style, light theme" src="images/BLE_Mondriaan_light.png" />
+**LIGHT**
 
-<img width="800" alt="BLE UART Terminal in Mondriaan style, dark theme" src="images/BLE_Mondriaan_dark.png" />
+![BLE UART Terminal, light theme](images/BLE_theme_light.png)
+
+**DARK**
+
+![BLE UART Terminal, dark theme](images/BLE_theme_dark.png)
+
+**MONDRIAAN**
+
+![BLE UART Terminal, Mondriaan theme](images/BLE_theme_mondriaan.png)
+
+**MONDRIAAN DARK**
+
+![BLE UART Terminal, Mondriaan dark theme](images/BLE_theme_mondriaan_dark.png)
 
 ### Install as an app with its own icon
 
@@ -145,6 +159,7 @@ If no devices appear or the connection fails, check that Web Bluetooth is enable
 | CR+LF / LF / CR / NONE | Line ending appended to each sent command |
 | ASCII / HEX / BOTH | Display format for received data |
 | Theme selector | Choose between **LIGHT**, **DARK**, **MONDRIAAN**, or **MONDRIAAN DARK** |
+
 ---
 
 ## Device compatibility

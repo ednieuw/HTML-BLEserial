@@ -1,0 +1,28 @@
+{
+  "presets": [
+    {
+      "label": "INFO",
+      "cmd": "I"
+    },
+    {
+      "label": "T/Sec",
+      "cmd": "K"
+    },
+    {
+      "label": "Display",
+      "cmd": "O"
+    },
+    {
+      "label": "Long Info",
+      "cmd": "II"
+    },
+    {
+      "label": "Q0",
+      "cmd": "Q0"
+    },
+    {
+      "label": "Q2",
+      "cmd": "Q2"
+    }
+  ]
+}
