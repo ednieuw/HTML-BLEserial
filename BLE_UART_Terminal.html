@@ -373,6 +373,7 @@ try {
   .line.sys .dir { color: var(--text-dim); }
   .line.ok .dir { color: var(--accent); text-shadow: 0 0 6px var(--accent); }
   .line .msg { white-space: pre-wrap; word-break: break-word; }
+  .line .msg:empty::after { content: '\200b'; }
   .line.rx .msg { color: var(--rx-text); text-shadow: 0 0 4px var(--accent-glow); }
   :root[data-theme="classic-light"] .line.rx .msg { text-shadow: none; }
   .line.tx .msg, .line .tx-inline { color: var(--tx-color); }
